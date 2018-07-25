@@ -1,0 +1,21 @@
+{
+  "BiasScan_Vstep": 10,
+  "BiasScan_start": 110,
+  "BiasScan_end": -1,
+  "BiasScan_samplingtime": 0.020,
+  "BiasScan_nsamples": 10,
+  "BiasScan_sleep": 1,
+  "PowerScan_Vstep": 10,
+  "PowerScan_start": 250,
+  "PowerScan_end": -1,
+  "PowerScan_samplingtime": 0.020,
+  "PowerScan_nsamples": 10,
+  "PowerScan_sleep":    0.5,
+  "ThresholdScan_Thstep": 1,
+  "ThresholdScan_start": 200,
+  "ThresholdScan_end": 1,
+  "ThresholdScan_Vpoints" : [0, 50, 100, 150, 200, 250],
+  "TemperatureScan_timestep": 0.2,
+  "TemperatureScan_Vset": 90,
+  "LatchTest_sleep"    : 0.2
+}
