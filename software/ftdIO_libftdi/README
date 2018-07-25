@@ -1,0 +1,33 @@
+The following instructions allow one to generate:
+
+a) an executable file (ftdIO) that can be used to read/write to HFT-RDO firmware registers
+b) a python-importable shared library (ftdIOmodule.so) that allows for higher level operations (such as sending packets of commands to the firmware and receiving long data)
+
+
+Procedure for (a)
+
+1) export LD_LIBRARY_PATH=/usr/local/lib
+
+2) From the ftdIO_libftdi folder, run:
+
+   make
+
+   This will create an executable file (ftdIO) in this folder
+
+3) (optional) Create a symbolic link to the executable file in your work folder:
+   
+   ln -s ftdIO_libftdi/ftdIO .
+
+
+
+Procedure for (b)
+
+1) From the ftdIO_libftdi folder, run: 
+
+  python setup.py build
+
+  This will create the shared library "ftdIOmodule.so" in the directory "liftdIO_libftdi/build/lib.linux-x86_64-2.6"
+
+2) (optional) Create a symbolic link to the executable file in your work folder:
+
+  ln -s ftdIO_libftdi_readFIFO/build/lib.linux-x86_64-2.6/ftdIO.so .

@@ -1,0 +1,28 @@
+Steps for testing a production power board:
+
+IMPORTANT NOTE: Make sure you wear protection glasses when testing power boards. Polarized capacitors, if loaded uncorrectly, can explode and damage your eyes.
+
+1)  Pick one of the power boards that has a LBNL label on it. Never test unlabelled power boards.
+2)  Place the power board in the power board testing area.
+3)  Connect the chiller hoses to the power board.
+4)  Switch on the chiller. Make sure that the temperature reaches the preset value and check that there are no leaks in the hoses.
+5)  Connect both power units to the two sets of "low current loads" - To do so plug the two corresponding breakout boards to the power board front panel.
+6)  Connect the 3.3V input power cable to the power board.
+7)  Connect the -5V input power cable to power board.
+8)  Connect the I2C ribble cables (flat) to Power Unit Right and Power Unit Left according to the labels on the power board and cables.
+9)  Run the tests using the GUI (see below).
+10) When the test with low current loads is completed, do the following:
+   a) Repeat procedure from step 6 to 9 with "nominal current loads"
+   b) Repeat procedure from step 6 to 9 with "high current loads"
+11) When all tests are done, disconnect all the cables, loads and chiller hoses (in reverse order wrt what described above).
+12) Remove all water from the power board heat exchanger, using paper and compressed air.
+13) Store the tested power board in the designated cabinet.
+
+FINAL NOTE: If one of the tests on a power board fails, conclude the tests with the current loads then follow steps 11 and 12 to disconnect the power board
+from the testing station. Once that is done put a label on the power board to mark it as non-working and add to it the name of the test(s) that didn't pass
+and which load was used. Don't put the power board in the designated power board cabinet, leave it on the bench near the power board testing station.
+
+Operation of the production power board GUI:
+
+1) Open a terminal and type "gotestproduction" then press "ENTER"
+2) Run "./GUI" 
