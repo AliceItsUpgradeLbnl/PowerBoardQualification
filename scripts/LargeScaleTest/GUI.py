@@ -789,6 +789,7 @@ class Application(tk.Frame):
             subprocess.call(['/bin/bash', '-c', "git add *"])
             subprocess.call(['/bin/bash', '-c', "git commit -m \"updating results\""])
             subprocess.call(['/bin/bash', '-c', "git push origin master"])
+            print "Done pushing data to the repo"
             
         PushDataToRepoButton = tk.Button(self, text = "Push Data", command = PushDataToRepo)
         PushDataToRepoButton.grid(row = 10, column = 6, sticky = 'nsew')
