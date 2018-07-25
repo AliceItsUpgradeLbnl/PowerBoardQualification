@@ -838,7 +838,6 @@ class Application(tk.Frame):
         PlotThresholdScanButton.grid(row = 24, column = 6, sticky = 'nsew')
         #############################################################################
 
-
         #self.can = tk.Canvas(self, width = 160, height = 160, bg = 'black')
         #self.can.grid(row = 0, column = 0)
         #self.img = tk.PhotoImage("LargeScaleTest/GuiUtils/Lawrence-Berkley-Laboratory.gif")
