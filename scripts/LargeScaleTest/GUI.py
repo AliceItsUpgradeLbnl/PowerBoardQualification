@@ -785,6 +785,12 @@ class Application(tk.Frame):
 
         ########### PUSH DATA BUTTON  ######################################
         def PushDataToRepo():
+            if not tkMessageBox.askyesno("Push data to repo", "Do you want to push all files to the repository?"): 
+                return 
+            if not tkMessageBox.askyesno("Push data to repo", "Are you really sure that you want to push all files to the repository?"): 
+                return 
+            if not tkMessageBox.askyesno("Push data to repo", "100% sure?"): 
+                return 
             subprocess.call(['/bin/bash', '-c', "cd .."])
             subprocess.call(['/bin/bash', '-c', "git add *"])
             subprocess.call(['/bin/bash', '-c', "git commit -m \"updating results\""])
