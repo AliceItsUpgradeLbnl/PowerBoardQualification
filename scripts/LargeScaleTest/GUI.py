@@ -15,7 +15,8 @@ from definitions import WriteToDevice
 from definitions import ReadFromDevice
 from definitions import ReadRSFromDevice
 
-from PowerUtils import PowerCyclePowerUnit
+from BkPrecision168xInterface import BkPrecision168xInterface
+from PowerUtils import *
 from I2CTest import I2CTest
 from LatchStatusCheck import *
 from VoltageScan import *
@@ -83,6 +84,7 @@ class Application(tk.Frame):
 
         config = {}
         PowerBoardIdIndexDict = {'Right': 1, 'Left': 2}
+        #self.biasPs = BkPrecision168xInterface()
         # get the most recent configuration file
         files = os.listdir(configurationFolder)
         prefix = 'config'
@@ -159,7 +161,6 @@ class Application(tk.Frame):
                 highEntry.config(disabledbackground = 'green') 
             else:
                 highEntry.config(disabledbackground = 'grey') 
-
                  
         def LoadFirmware():
 	    os.system('clear')
@@ -188,6 +189,8 @@ class Application(tk.Frame):
 	    print " "
 	    print " "
             subprocess.call(['/bin/bash', '-c', "/home/its/Desktop/PB-production/PB-production/USB_tools/findall.sh"])
+            #PowerCycleBias(5)
+            PowerCyclePower("Both", voltage = 3.3)
             OpenFtdi()
             print "Attempting to read from Power Unit Right..."
             data1 = GetBiasLatchStatus(1)
@@ -204,8 +207,65 @@ class Application(tk.Frame):
 	    print "                             End checking communication!"
 	    print "========================================================================================="
 
+        def PowerCyclePower(PowerUnitID, voltage):
+            if PowerUnitID == "Both":
+                PowerCyclePower("Right", voltage)
+                PowerCyclePower("Left", voltage)
+                return
+            tdk_mapping = {"Right": 0, "Left": 1}
+            tdk_id = tdk_mapping[PowerUnitID]
+            set_status_TDK(tdk_id, "OFF")
+            time.sleep(1)
+            set_volt_TDK(tdk_id, 3.3)
+            set_status_TDK(tdk_id, "ON")
+            time.sleep(1)
+            switchcontrol_TDK(tdk_id, "LOC")
+
+        def TurnOffPower(PowerUnitID):
+            if PowerUnitID == "Both":
+                TurnOffPower("Right")
+                TurnOffPower("Left")
+                return
+            tdk_mapping = {"Right": 0, "Left": 1}
+            tdk_id = tdk_mapping[PowerUnitID]
+            set_status_TDK(tdk_id, "OFF")
+
+        def PowerCycleBias(voltage):
+            self.biasPs.SetOutputOff() 
+            self.biasPs.SetVoltage(voltage)
+            self.biasPs.SetCurrentUpperLimit(0.1)
+            self.biasPs.SetOutputOn()
+
+        def TurnOffBias(voltage):
+            self.biasPs.SetOutputOff() 
+
+        def CheckPowerStatus(PowerUnitID, status, voltage, current):
+            if PowerUnitID == "Both":
+                good = CheckPowerStatus("Right", status, voltage, current)
+                good = good and CheckPowerStatus("Left", status, voltage, current)
+                return good
+            tdk_mapping = {"Right": 0, "Left": 1}
+            tdk_id = tdk_mapping[PowerUnitID]
+            tdk_status  = read_status_TDK(tdk_id)
+            tdk_voltage = read_volt_TDK(tdk_id)
+            tdk_current = read_curr_TDK(tdk_id)
+            if (tdk_status != status or tdk_voltage != voltage or tdk_current > current):
+                print "Error: Power Status on Power Unit %s is wrong" %(PowerUnitID) 
+                return False
+            return True  
+
+        def CheckBiasStatus(mode, voltage, current):
+            bk_status  = self.biasPs.GetOutputStatus()
+            bk_voltage = self.biasPs.GetVoltage()
+            bk_mode    = self.biasPs.GetMode()
+            if (bk_mode != mode or bk_voltage != voltage or bk_current > current):
+                print "Error: Bias Status is wrong" 
+                return False
+            return True
+
         ## Test methods ###########################################
         def RunI2CTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+            ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
@@ -234,9 +294,10 @@ class Application(tk.Frame):
             return passed
 
         def RunLatchupCheck(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+            ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
-            #if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
-            #    return
+            if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
+                return
             os.system('clear')
             print "========================================================================================="
             print "                Starting Latch Up Scan on Power Unit %s ........." %(PowerUnitID)
@@ -265,6 +326,7 @@ class Application(tk.Frame):
             return passed
 
         def RunBiasVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+            ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
@@ -309,6 +371,7 @@ class Application(tk.Frame):
             return passed
 
         def RunPowerVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+            ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
@@ -359,6 +422,7 @@ class Application(tk.Frame):
             return passed
 
         def RunThresholdScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+            ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
@@ -395,6 +459,7 @@ class Application(tk.Frame):
             return passed
 
         def RunOverTprotectionScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+            ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
@@ -429,14 +494,12 @@ class Application(tk.Frame):
             return passed
 
         def RunAllScans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile=False):
+            ResetReportFieldTitle('Both')
             CleanTestReportEntry('Both')
             try:
                 if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                     return
-                if not tkMessageBox.askyesno("Voltage Check", "Are the supplied voltages 3.3V and 5V?"): 
-                    return 
-                if not tkMessageBox.askyesno("Current Check", "Are the 3.3V and 5V idle currents close to 0A?"):
-                    return
+                CheckPowerStatus("Both", True, 3.3, 0.5)
                 RunAllTestsButton.config(state='disabled')
                 output = buildOutputFilename(timestamp, "PreliminaryCheck", "Both")
                 if os.path.exists(output): os.remove(output)
@@ -460,37 +523,38 @@ class Application(tk.Frame):
                     for PowerUnitID in PowerUnitIDs:
 		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchupCheck(timestamp, saveToFile, PowerUnitID))     << 1)
                 for PowerUnitID in PowerUnitIDs:
-		    # List of tests that will be run
 	            testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 2)
-		    #testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 3)
-		    #testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunThresholdScan(timestamp, saveToFile, PowerUnitID))    << 4)
+		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 3)
+		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunThresholdScan(timestamp, saveToFile, PowerUnitID))    << 4)
                 for PowerUnitID in PowerUnitIDs:
+                    ResetReportFieldTitle(PowerUnitID)
                     CleanTestReportEntry(PowerUnitID)
                     messageBuffer, passed[PowerUnitID] = SummaryOfResults(127, testResults[PowerUnitID])
 	            PrintSummaryInGui(PowerUnitID, messageBuffer)
-                    UpdateReportFieldsTitle(PowerUnitID, passed[PowerUnitID])
+                    UpdateReportFieldTitle(PowerUnitID, passed[PowerUnitID])
 	        pbtestingStatus = GetPowerBoardTestingStatus(GetBoardID())
                 SetPbtestingStatusFields(pbtestingStatus)
                 # Tests are finished, resetting parameters
 		tkMessageBox.showwarning( "Info", "All tests finished.", icon="info")
                 RunAllTestsButton.config(state="normal")
-                name.set('')
-                ddownNames['bg'] = 'salmon'
-                UnlockBoardID()
-                load.set('')
-                ddownLoads['bg'] = 'salmon'
-                CheckComm['bg'] = 'salmon'
+                #name.set('')
+                #ddownNames['bg'] = 'salmon'
+                if pbtestingStatus == [1, 1, 1]:
+                    UnlockBoardID()
+                    load.set('')
+                    ddownLoads['bg'] = 'salmon'
+                    CheckComm['bg'] = 'salmon'
                 return passed
             except StopTest:
                 StopAllScans()
 
-        def UpdateReportFieldsTitle(PowerUnitID, passed):
+        def UpdateReportFieldTitle(PowerUnitID, passed):
             qualification = ""
             fgcolor       = ""
             if passed:
                 qualification = "good"
                 fgcolor       = "green"
-            else:
+            elif not passed:
                 qualification = "bad"
                 fgcolor       = "red"
 
@@ -498,6 +562,15 @@ class Application(tk.Frame):
                 reportsRightTitle.config(text = ("Power Unit Right Qualification: " + qualification), fg = fgcolor)
             elif PowerUnitID == "Left":
                 reportsLeftTitle.config(text = ("Power Unit Left Qualification: " + qualification), fg = fgcolor)
+
+        def ResetReportFieldTitle(PowerUnitID):
+            if PowerUnitID == "Right":
+                reportsRightTitle.config(text = "Power Unit Right Qualification: None", fg = "black")
+            elif PowerUnitID == "Left":
+                reportsLeftTitle.config(text = "Power Unit Left Qualification: None", fg = "black")
+            elif PowerUnitID == "Both":
+                ResetReportFieldTitle("Left")
+                ResetReportFieldTitle("Right")
 
         def StopAllScans():
             raise StopTest

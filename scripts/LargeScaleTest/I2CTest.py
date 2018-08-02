@@ -52,11 +52,11 @@ def I2CTest(PowerUnitID):
     ConfigureBiasADC(PowerUnitID) 
     SetBiasVoltage(125, PowerUnitID)     
     time.sleep(0.5)
-    if (ReadBiasADC(PowerUnitID) > -4.):
+    if (ReadBiasADC(PowerUnitID)[1] > -4.):
 	passed = False
     SetBiasVoltage(0, PowerUnitID)     
     time.sleep(0.5)
-    if (ReadBiasADC(PowerUnitID) < -2.):
+    if (ReadBiasADC(PowerUnitID)[1] < -2.):
 	passed = False
 
     CloseFtdi()
