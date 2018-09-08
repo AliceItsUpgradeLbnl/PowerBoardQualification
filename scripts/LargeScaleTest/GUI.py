@@ -37,9 +37,13 @@ class StopTest(Exception):
     pass
 
 class Application(tk.Frame):
+    def disable_event(self):
+        pass	
+
     def __init__(self, master=None):
         tk.Frame.__init__(self, master, relief = 'ridge', borderwidth = 2)
         self.grid(ipadx = 0, ipady = 0)
+        root.protocol("WM_DELETE_WINDOW", self.disable_event)
 
         # Defining the size of all columns
         self.grid_rowconfigure(0, minsize = 10)
@@ -71,6 +75,7 @@ class Application(tk.Frame):
         self.grid_rowconfigure(26, minsize = 10)
         self.grid_rowconfigure(27, minsize = 10)
         self.grid_rowconfigure(28, minsize = 10)
+        self.grid_rowconfigure(29, minsize = 10)
         self.grid_columnconfigure(0, minsize = 10)
         self.grid_columnconfigure(1, minsize = 60)
         self.grid_columnconfigure(2, minsize = 60)
@@ -84,7 +89,7 @@ class Application(tk.Frame):
 
         config = {}
         PowerBoardIdIndexDict = {'Right': 1, 'Left': 2}
-        #self.biasPs = BkPrecision168xInterface()
+        self.biasPs = BkPrecision168xInterface()
         # get the most recent configuration file
         files = os.listdir(configurationFolder)
         prefix = 'config'
@@ -129,9 +134,16 @@ class Application(tk.Frame):
                 clearResultsButton.config(state='normal')
                 pbtestingStatus = GetPowerBoardTestingStatus(GetBoardID())
                 SetPbtestingStatusFields(pbtestingStatus)
+                SetPreliminaryTestStatus(pbtestingStatus)
             except:
                 boardidField.delete(0, "end")
                 tkMessageBox.showinfo("Wrong Board ID", "Invalid Board ID. Rescan and confirm.")
+
+        def SetPreliminaryTestStatus(pbtestingStatus):
+            if (pbtestingStatus[0]):
+            	PrelTest.config(bg='green')
+            else:
+                PrelTest.config(bg='salmon')
 
         def UnlockBoardID():
             boardidField.config(state='normal')
@@ -140,6 +152,7 @@ class Application(tk.Frame):
             unlockButton.config(state='disabled')
             clearResultsButton.config(state='disabled')
             SetPbtestingStatusFields([0,0,0])
+            SetPreliminaryTestStatus([0,0,0])
             self.BoardID = None
 
         def GetPowerBoardTestingStatus(boardId):
@@ -163,6 +176,8 @@ class Application(tk.Frame):
                 highEntry.config(disabledbackground = 'grey') 
                  
         def LoadFirmware():
+            if not CheckPreliminaryTestDone():
+                return
 	    os.system('clear')
 	    print "========================================================================================="
 	    print "                            Start loading firmware ........."
@@ -188,38 +203,49 @@ class Application(tk.Frame):
 	    print "========================================================================================="
 	    print " "
 	    print " "
+
+            # Checking USB communication with FPGA
             subprocess.call(['/bin/bash', '-c', "/home/its/Desktop/PB-production/PB-production/USB_tools/findall.sh"])
-            #PowerCycleBias(5)
-            PowerCyclePower("Both", voltage = 3.3)
-            OpenFtdi()
-            print "Attempting to read from Power Unit Right..."
-            data1 = GetBiasLatchStatus(1)
-            print "Done successfully!"
-            print "Attempting to read from Power Unit Left..."
-            data2 = GetBiasLatchStatus(2)
-            print "Done successfully!"
-            CloseFtdi()
-            CheckComm.config(bg='green')
+
+            # Check power and bias to the power board, if not good, exit
+            passed = PowerCycleBias() and PowerCyclePower("Both")
+
+            if passed:
+            	# Checking I2C communication with the Power Board
+            	OpenFtdi()
+            	print "Attempting to read from Power Unit Right..."
+            	data1 = GetBiasLatchStatus(1)
+            	print "Done successfully!"
+            	print "Attempting to read from Power Unit Left..."
+            	data2 = GetBiasLatchStatus(2)
+            	print "Done successfully!"
+            	CloseFtdi()
+            	CheckComm.config(bg='green')
 
 	    print " "
 	    print " "
 	    print "========================================================================================="
-	    print "                             End checking communication!"
+	    print "                             End checking communication! Passed? " + str(passed)
 	    print "========================================================================================="
 
-        def PowerCyclePower(PowerUnitID, voltage):
+        def PowerCyclePower(PowerUnitID, voltage = 3.3):
             if PowerUnitID == "Both":
-                PowerCyclePower("Right", voltage)
-                PowerCyclePower("Left", voltage)
-                return
+                purSuccess = PowerCyclePower("Right", voltage)
+                pulSuccess = PowerCyclePower("Left", voltage)
+                return purSuccess and pulSuccess
             tdk_mapping = {"Right": 0, "Left": 1}
             tdk_id = tdk_mapping[PowerUnitID]
-            set_status_TDK(tdk_id, "OFF")
-            time.sleep(1)
-            set_volt_TDK(tdk_id, 3.3)
-            set_status_TDK(tdk_id, "ON")
-            time.sleep(1)
-            switchcontrol_TDK(tdk_id, "LOC")
+            try:
+            	set_status_TDK(tdk_id, "OFF")
+            	time.sleep(0.1)
+            	set_volt_TDK(tdk_id, 3.3)
+            	set_status_TDK(tdk_id, "ON")
+            	time.sleep(0.1)
+            	switchcontrol_TDK(tdk_id, "LOC")
+                return True
+            except:
+                print "Attempt to power cycle Power Unit " + PowerUnitID + " failed"
+                return False
 
         def TurnOffPower(PowerUnitID):
             if PowerUnitID == "Both":
@@ -228,42 +254,113 @@ class Application(tk.Frame):
                 return
             tdk_mapping = {"Right": 0, "Left": 1}
             tdk_id = tdk_mapping[PowerUnitID]
-            set_status_TDK(tdk_id, "OFF")
+            try:
+            	set_status_TDK(tdk_id, "OFF")
+            except:
+                print "Power Unit " + PowerUnitID + " 3.3V power supply not found"
 
-        def PowerCycleBias(voltage):
-            self.biasPs.SetOutputOff() 
-            self.biasPs.SetVoltage(voltage)
-            self.biasPs.SetCurrentUpperLimit(0.1)
-            self.biasPs.SetOutputOn()
+        def PowerCycleBias(voltage = 5.0):
+            try:
+            	self.biasPs.SetOutputOff() 
+            	self.biasPs.SetVoltage(voltage)
+            	self.biasPs.SetCurrentUpperLimit(10)
+            	self.biasPs.SetOutputOn()
+                return True
+	    except:
+                print "Attempt to power cycle bias failed"
+		return False
+	
+        def TurnOffBias():
+            try:
+            	self.biasPs.SetOutputOff() 
+            except:
+                print "Bias -5V power supply not found"
 
-        def TurnOffBias(voltage):
-            self.biasPs.SetOutputOff() 
+        def TurnOffAll():
+            TurnOffPower("Both")
+            TurnOffBias()
 
-        def CheckPowerStatus(PowerUnitID, status, voltage, current):
+        def CheckPowerStatus(PowerUnitID, current = 0.25):
             if PowerUnitID == "Both":
-                good = CheckPowerStatus("Right", status, voltage, current)
-                good = good and CheckPowerStatus("Left", status, voltage, current)
+                good = CheckPowerStatus("Right", status, current = 0.25)
+                good = good and CheckPowerStatus("Left", status, voltage, current = 0.25)
                 return good
+            print "Checking 3.3V status (Voltage/Current)"
             tdk_mapping = {"Right": 0, "Left": 1}
             tdk_id = tdk_mapping[PowerUnitID]
             tdk_status  = read_status_TDK(tdk_id)
-            tdk_voltage = read_volt_TDK(tdk_id)
-            tdk_current = read_curr_TDK(tdk_id)
-            if (tdk_status != status or tdk_voltage != voltage or tdk_current > current):
+            tdk_voltage = int(float(read_volt_TDK(tdk_id)) * 10)/10.
+            tdk_current = float(read_curr_TDK(tdk_id))
+            if (tdk_status != "ON" or tdk_voltage != 3.3 or tdk_current > 0.5):
                 print "Error: Power Status on Power Unit %s is wrong" %(PowerUnitID) 
                 return False
             return True  
 
-        def CheckBiasStatus(mode, voltage, current):
-            bk_status  = self.biasPs.GetOutputStatus()
-            bk_voltage = self.biasPs.GetVoltage()
+        def CheckBiasStatus():
+            print "Checking -5V status (Voltage/Current)"
+            bk_voltage = float(self.biasPs.GetVoltage())
+            bk_current = float(self.biasPs.GetCurrent())
             bk_mode    = self.biasPs.GetMode()
-            if (bk_mode != mode or bk_voltage != voltage or bk_current > current):
+            if (bk_mode != "CV" or  bk_voltage != 5. or bk_current > 0.025 or bk_current < 0.015):
                 print "Error: Bias Status is wrong" 
                 return False
             return True
 
         ## Test methods ###########################################
+
+        def PreliminaryTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+            os.system('clear')
+            print "========================================================================================="
+            print "                   Starting preliminary test on Power Unit %s ........." %(PowerUnitID)
+            print "========================================================================================="
+            print " "
+            print " "
+
+            temporaryFile = "JUNK/PreliminaryTest_PowerUnit%s.txt" %(PowerUnitID)
+            if os.path.exists(temporaryFile): os.remove(temporaryFile)
+
+            passed = True
+
+            PowerCycleBias(voltage = 5.0)
+            PowerCyclePower(PowerUnitID, voltage = 3.3)
+
+            time.sleep(2.)
+
+            # Voltages and current measurement after power on for the first time
+            if not (CheckPowerStatus(PowerUnitID) and CheckBiasStatus()):
+                passed = False
+            else:
+                with open(temporaryFile,"ab") as f: f.write("Voltages/Currents OK\n")
+
+            # Ask user if any damage was found on the power unit
+            if not tkMessageBox.askyesno("Polarized components status", "Smoke test Run for 2s per on Power Unit %s, is the board OK?" %(PowerUnitID)):
+                passed = False
+            else:
+                with open(temporaryFile,"ab") as f: f.write("Smoke test OK\n")
+
+            TurnOffPower(PowerUnitID)
+            TurnOffBias()
+             
+            CleanTestReportEntry(PowerUnitID)
+            PrintSummaryInGui(PowerUnitID, [GetTestMessage(0, passed)])
+            if saveToFile and passed:
+            	outputFile = buildOutputFilename(timestamp, "PreliminaryTest", PowerUnitID)
+                subprocess.call(['/bin/bash', "-c", "cp %s %s" %(temporaryFile, outputFile)])
+
+            print " "
+            print " "
+            print "========================================================================================="
+            print "                        Preliminary test ended. Test passed? ", passed
+            print "========================================================================================="
+
+            return passed
+
+        def PreliminaryTests():
+            passed = PreliminaryTest(PowerUnitID="Right") 
+            passed = passed and PreliminaryTest(PowerUnitID="Left") 
+            if passed:
+            	PrelTest.config(bg='green')
+
         def RunI2CTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
@@ -280,7 +377,9 @@ class Application(tk.Frame):
             temporaryFile = "JUNK/I2CTest_PowerUnit%s.txt" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
             passed = I2CTest(PowerBoardIdIndexDict[PowerUnitID])
-            PrintSummaryInGui(PowerUnitID, [GetTestMessage(0, passed)])
+            if passed: 
+                with open(temporaryFile,"ab") as f: f.write("All I2C transactions successful\n")
+            PrintSummaryInGui(PowerUnitID, [GetTestMessage(1, passed)])
             if saveToFile and passed:
                 outputFile = buildOutputFilename(timestamp, "I2CTest", PowerUnitID)
                 subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
@@ -312,7 +411,7 @@ class Application(tk.Frame):
                 f.write(str(header) + "\n")
             sleep = config["LatchTest_sleep"]		
             passed = LatchUpCheck(temporaryFile, sleep, PowerBoardIdIndexDict[PowerUnitID])
-            PrintSummaryInGui(PowerUnitID, [GetTestMessage(1, passed)])
+            PrintSummaryInGui(PowerUnitID, [GetTestMessage(2, passed)])
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "Latchtest", PowerUnitID)
                 subprocess.call(['/bin/bash', "-c", "cp %s %s" %(temporaryFile, outputFile)])
@@ -357,7 +456,7 @@ class Application(tk.Frame):
             bvsData.readFile(temporaryFile)
             bvsHasProblem = bvsData.visualizeAndCheck()
             passed = not bvsHasProblem
-            PrintSummaryInGui(PowerUnitID, [GetTestMessage(2, passed)])
+            PrintSummaryInGui(PowerUnitID, [GetTestMessage(3, passed)])
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "BiasVoltageScan", PowerUnitID)
                 subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
@@ -408,7 +507,7 @@ class Application(tk.Frame):
                vsHasProblem = vsData.visualizeAndCheck(True)
 
             passed = not vsHasProblem
-            PrintSummaryInGui(PowerUnitID, [GetTestMessage(3, passed)])
+            PrintSummaryInGui(PowerUnitID, [GetTestMessage(4, passed)])
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "VoltageScan", PowerUnitID)
                 subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
@@ -445,7 +544,7 @@ class Application(tk.Frame):
             for V in Vset:
                 thresholdScanAll(temporaryFile, step, start, end, V, PowerBoardIdIndexDict[PowerUnitID])
             passed = False
-            PrintSummaryInGui(PowerUnitID, [GetTestMessage(4, passed)])
+            PrintSummaryInGui(PowerUnitID, [GetTestMessage(5, passed)])
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "ThresholdScan", PowerUnitID)
                 subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
@@ -480,7 +579,7 @@ class Application(tk.Frame):
             Vset = config["TemperatureScan_Vset"]
 
             passed = TemperatureTest(temporaryFile, timestep, PowerBoardIdIndexDict[PowerUnitID], Vset)
-            PrintSummaryInGui(PowerUnitID, [GetTestMessage(5, passed)])
+            PrintSummaryInGui(PowerUnitID, [GetTestMessage(6, passed)])
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "TemperatureScan", PowerUnitID)
                 subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
@@ -493,35 +592,35 @@ class Application(tk.Frame):
 
             return passed
 
+
         def RunAllScans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile=False):
             ResetReportFieldTitle('Both')
             CleanTestReportEntry('Both')
             try:
                 if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                     return
-                CheckPowerStatus("Both", True, 3.3, 0.5)
-                RunAllTestsButton.config(state='disabled')
-                output = buildOutputFilename(timestamp, "PreliminaryCheck", "Both")
-                if os.path.exists(output): os.remove(output)
-                with open(output,"ab") as f: f.write("OK\n")
-                if not tkMessageBox.askyesno("Start run", "Are you sure you want to run all tests?"):
-                    return
                 root.update()
-                            
+                RunAllTestsButton.config(state = 'disabled')
                 passed      = {"Right": False, "Left": False}
                 testResults = {"Right": 0, "Left": 0}
                 PowerUnitIDs = ['Right', 'Left']
-                # Running preliminary tests
-                if load.get() == 'low':
+                # Running characterization tests
+                if load.get() == 'Low':
 		    tkMessageBox.showwarning( "Info", "Load \"low\" was selected. The GUI will run some preliminary tests on both power units before the scans.", icon="info")
+                    # Running preliminary tests
                     for PowerUnitID in PowerUnitIDs:
+                        PowerCycleBias()
+                        PowerCyclePower(PowerUnitID)
 		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunOverTprotectionScan(timestamp, saveToFile, PowerUnitID)) << 5)
                         tkMessageBox.showwarning( "Info", "Power Unit %s will be power cycled." %(PowerUnitID), icon="info")
-                        PowerCyclePowerUnit(PowerUnitID)
                     for PowerUnitID in PowerUnitIDs:
+                        PowerCycleBias()
+                        PowerCyclePower(PowerUnitID)
 		        testResults[PowerUnitID] = testResults[PowerUnitID] | RunI2CTest(timestamp, saveToFile, PowerUnitID)
                     for PowerUnitID in PowerUnitIDs:
-		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchupCheck(timestamp, saveToFile, PowerUnitID))     << 1)
+                        PowerCycleBias()
+                        PowerCyclePower(PowerUnitID)
+		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchupCheck(timestamp, saveToFile, PowerUnitID)) << 1)
                 for PowerUnitID in PowerUnitIDs:
 	            testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 2)
 		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 3)
@@ -539,6 +638,8 @@ class Application(tk.Frame):
                 RunAllTestsButton.config(state="normal")
                 #name.set('')
                 #ddownNames['bg'] = 'salmon'
+                TurnOffPower("Both")
+                TurnOffBias()
                 if pbtestingStatus == [1, 1, 1]:
                     UnlockBoardID()
                     load.set('')
@@ -596,14 +697,20 @@ class Application(tk.Frame):
             return True
 
         def CheckRDOConfigAndCommDone():
-            if (LdFirmware['bg'] == 'salmon' or CheckComm['bg'] == 'salmon'):
+            if (LdFirmware['bg'] != 'green' or CheckComm['bg'] != 'green'):
                 tkMessageBox.showinfo("RDO unconfigured/unckecked", "Please check that:\n\n1) The firmware is loaded into the FPGA\n2) There is communication with the power board")
                 return False
             return True
 
         def CheckRDOConfigDone():
-            if (LdFirmware['bg'] == 'salmon'):
+            if (LdFirmware['bg'] != 'green'):
                 tkMessageBox.showinfo("RDO unconfigured", "Please load the firmware into the FPGA before checking the communication")
+                return False
+            return True
+
+        def CheckPreliminaryTestDone():
+            if (PrelTest['bg'] != 'green'):
+                tkMessageBox.showinfo("Preliminary Test not run", "Please run the preliminary test before loading the FPGA firmware")
                 return False
             return True
                             
@@ -654,16 +761,18 @@ class Application(tk.Frame):
             else:
                 testResult = 'failed'
             if (testNumber == 0):
-                return "I2C test " + testResult
+                return "Preliminary test " + testResult
             elif (testNumber == 1):
-                return "Latchup test " + testResult
+                return "I2C test " + testResult
             elif (testNumber == 2):
-                return "Bias Voltage scan " + testResult
+                return "Latchup test " + testResult
             elif (testNumber == 3):
-                return "Power Voltage scan " + testResult
+                return "Bias Voltage scan " + testResult
             elif (testNumber == 4):
-                return "Threshold scan " + testResult
+                return "Power Voltage scan " + testResult
             elif (testNumber == 5):
+                return "Threshold scan " + testResult
+            elif (testNumber == 6):
                 return "Over-temperature test " + testResult
             else:
                 return "Wrong test type selected"
@@ -772,12 +881,17 @@ class Application(tk.Frame):
         VoltageScanPlotOption = tk.IntVar()
         VoltageScanPlotOption.set(2)
 
+        ######### RUN Preliminary test  ###########################################################
+        PrelTest = tk.Button(self, text="Preliminary test", command = PreliminaryTests, bg = 'salmon')
+        PrelTest.grid(row = 3, column = 4, sticky = 'nsew')
+        ###########################################################################################
+
         ######### RDO CFG/CHECK  ##############################################################
         tk.Label(self, text = "RDO Config/Check", fg="black").grid(row = 2, column = 5)
         #######################################################################################
 
         ######### LOAD FIRMWARE  ##################################################################
-        LdFirmware = tk.Button(self, text="Load Firmware", command = LoadFirmware, bg = 'salmon')
+        LdFirmware = tk.Button(self, text="Load FPGA Firmware", command = LoadFirmware, bg = 'salmon')
         LdFirmware.grid(row = 3, column = 5, sticky = 'nsew')
         ###########################################################################################
 
@@ -918,17 +1032,21 @@ class Application(tk.Frame):
         PlotThresholdScanButton.grid(row = 24, column = 6, sticky = 'nsew')
         #############################################################################
 
-        #self.can = tk.Canvas(self, width = 160, height = 160, bg = 'black')
-        #self.can.grid(row = 0, column = 0)
-        #self.img = tk.PhotoImage("LargeScaleTest/GuiUtils/Lawrence-Berkley-Laboratory.gif")
-        #self.label = tk.Label(image=self.img)
-        #self.item = self.can.create_image(100, 100, image=self.img)
+        def CloseGui():
+           TurnOffPower("Both")
+           TurnOffBias()
+           root.quit()
 
-        #can = tk.Canvas(self, width = 160, height = 160, bg = 'black')
-        #image = tk.Image('LargeScaleTest/GuiUtils/Lawrence-Berkley-Laboratory.jpeg')
-        #pic = tk.PhotoImage(image)
-        ##pic = tk.PhotoImage()
-        #item = can.create_image(0, 0, image=pic)
+        ########### PLOT THRESHOLD SCAN BUTTON ######################################
+        TurnOffButton = tk.Button(self, text = "Turn Off PS", command = TurnOffAll)
+        TurnOffButton.grid(row = 28, column = 4, sticky = 'nsew')
+        #############################################################################
+
+        ########### PLOT THRESHOLD SCAN BUTTON ######################################
+        CloseGuiButton = tk.Button(self, text = "Close GUI", command = CloseGui)
+        CloseGuiButton.grid(row = 28, column = 5, sticky = 'nsew')
+        #############################################################################
+
 
 ##Actual MAIN FUNCTION
 root = tk.Tk()

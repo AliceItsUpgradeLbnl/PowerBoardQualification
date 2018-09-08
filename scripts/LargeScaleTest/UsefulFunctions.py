@@ -86,10 +86,14 @@ def SetThresholdAll(PowerUnitID, value):
         WriteToDevice(I2CLink(PowerUnitID, LinkType), ThresPowerAddress[channel/4], (3<<4 | channel%4), value/16, ((value%16<<4)))
 
 def ConfigurePowerADC(PowerUnitID):
-    print "Configuring Power ADCs..."
+    print "Configuring Power ADCs..."    
 
     LinkType = ADCLink
     for SlaveAddress in ADCAddress:
+    	I2CData = [0x0, 0x0] # Setting the start bit of the configuration register to 0 (to be able to set the conversion rate register)
+    	WriteToDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, *I2CData)    
+        I2CData = [0x7, 0x1] # Setting the conversion rate register
+        WriteToDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, *I2CData)    
         I2CData = [0xB, 0x2] # Setting the advanced configuration register
         WriteToDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, *I2CData)    
         I2CData = [0x0, 0x1] # Setting the configuration register
@@ -100,6 +104,10 @@ def ConfigureBiasADC(PowerUnitID):
 
     LinkType = ADCBiasLink
     SlaveAddress = ADCBiasAddress
+    I2CData = [0x0, 0x0] # Setting the start bit of the configuration register to 0 (to be able to set the conversion rate register)
+    WriteToDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, *I2CData)    
+    I2CData = [0x7, 0x1] # Setting the conversion rate register
+    WriteToDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, *I2CData)    
     I2CData = [0xB, 0x2] # Setting the advanced configuration register
     WriteToDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, *I2CData)    
     I2CData = [0x0, 0x1] # Setting the configuration register
@@ -129,6 +137,46 @@ def ReadPowerADC(PowerUnitID):
     #print V
     return I,V, I_ADC ,V_ADC
 
+def ReadPowerChannelVoltage(channel, PowerUnitID):
+    #print "Reading channel voltage..."
+
+    LinkType = ADCLink
+    NumOfBytesToRead = 2
+    SlaveAddress = ADCAddress[channel/4]
+    I2CData = [0x20 + ((channel%4) * 2)]
+    WriteToDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, *I2CData)
+    ADCValue = ReadFromDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, NumOfBytesToRead)
+    return ((ADCValue[0]>>4)/4096.) * 3.072
+
+def ReadPowerChannelVoltages(PowerUnitID):
+    #print "Reading channel voltages..."
+
+    voltages = []
+    for channel in range(0, 16):
+        voltages.append(ReadPowerChannelVoltage(channel, PowerUnitID))
+
+    return voltages
+
+def ReadPowerChannelCurrent(channel, PowerUnitID):
+    #print "Reading channel current..."
+
+    LinkType = ADCLink
+    NumOfBytesToRead = 2
+    SlaveAddress = ADCAddress[channel/4]
+    I2CData = [0x20 + ((channel%4) * 2) + 1]
+    WriteToDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, *I2CData)
+    ADCValue = ReadFromDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, NumOfBytesToRead)
+    return (((ADCValue[0]>>4)/4096.) * 2.56 - 0.25)/(0.005 * 150)
+
+def ReadPowerChannelCurrents(PowerUnitID):
+    #print "Reading channel currents..."
+
+    currents = []
+    for channel in range(0, 16):
+        currents.append(ReadPowerChannelCurrent(channel, PowerUnitID))
+
+    return currents
+
 def ReadBiasADC(PowerUnitID):
     #print "Reading the ADC channels for bias..."
 
@@ -143,7 +191,7 @@ def ReadBiasADC(PowerUnitID):
         Array.append( ((ADCValue[0]>>4)/4096.)*2.56 )
   
     I = Array[0]
-    V = Array[2]*(-2)
+    V = Array[2]*(-2.)
     return I,V
 
 def SetPowerVoltageAll(voltage, PowerUnitID):
@@ -254,15 +302,14 @@ def UnlatchBias(channel,PowerUnitID):
     LinkType = IOExpanderBiasLink
     WriteToDevice(I2CLink(PowerUnitID, LinkType), IOExpanderBiasAddress, int(0xFF^2**channel)) 
 
-
 def DisablePowerAll(PowerUnitID):
-    print 'Disabling ALL power channels'
+    #print 'Disabling ALL power channels'
     LinkType = IOExpanderPowerLink
     WriteToDevice(I2CLink(PowerUnitID, LinkType), IOExpanderPowerAddress[0], 0x00) 
     WriteToDevice(I2CLink(PowerUnitID, LinkType), IOExpanderPowerAddress[1], 0x00) 
 
 def DisableBiasAll(PowerUnitID):
-    print 'Disabling ALL bias channels'
+    #print 'Disabling ALL bias channels'
     LinkType = IOExpanderBiasLink
     WriteToDevice(I2CLink(PowerUnitID, LinkType), IOExpanderBiasAddress, 0xFF) 
 

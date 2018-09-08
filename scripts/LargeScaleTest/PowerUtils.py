@@ -22,7 +22,7 @@ def read_status_TDK(tdk_id):
     data = s.recv(BUFFER_SIZE)
     s.close()
     wait()
-    return data
+    return data[0:-1]
 
 def set_status_TDK(tdk_id, tdk_status):
     if tdk_id < 0 or tdk_id > 1:
