@@ -8,8 +8,8 @@ from stat import S_IREAD, S_IRGRP, S_IROTH
 # set this to false to stop running the job
 runJob = True
 daysPast = 1
-datadirectory = "/home/its/Desktop/powerboard_8channel_tests/PB_8-channel/scripts/TXTFILES/"
-configdirectory = "/home/its/Desktop/powerboard_8channel_tests/PB_8-channel/scripts/LargeScaleTest/ScanConfig/"
+datadirectory = "/home/its/Desktop/PB-production/PB_production/scripts/RESULTS/"
+configdirectory = "/home/its/Desktop/PB-production/PB_production/scripts/LargeScaleTest/ScanConfig/"
 
 if runJob:
 	# find yesterday's date and format it correctly

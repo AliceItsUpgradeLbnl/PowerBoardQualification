@@ -24,9 +24,9 @@ def DeleteBoardFiles(boardId):
 
 def GetListOfTestTypes(loadType):
     if loadType == 'Low':
-        return ["PreliminaryCheck", "TemperatureScan", "I2CTest", "LatchupTest", "BiasVoltageScan", "PowerVoltageScan", "ThresholdScan"]
+        return ["TemperatureScan", "LatchupTest", "BiasVoltageScan", "PowerVoltageScan", "ThresholdScan"]
     elif loadType == 'Nominal' or loadType == 'High':
-        return ["PreliminaryCheck", "BiasVoltageScan", "PowerVoltageScan", "ThresholdScan"]
+        return ["BiasVoltageScan", "PowerVoltageScan", "ThresholdScan"]
 
     print "Wrong load type provided to check files"
     sys.exit()

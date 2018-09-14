@@ -250,6 +250,11 @@ def UnlatchBiasAll(PowerUnitID):
     LinkType = IOExpanderBiasLink
     WriteToDevice(I2CLink(PowerUnitID, LinkType), IOExpanderBiasAddress, 0x00) 
 
+def UnlatchBiasWithMask(mask, PowerUnitID):
+    #print 'Unlatching ALL bias channels'
+    LinkType = IOExpanderBiasLink
+    mask = 0xFF - mask
+    WriteToDevice(I2CLink(PowerUnitID, LinkType), IOExpanderBiasAddress, mask) 
 
 def UnlatchPower(channel,PowerUnitID):
     #print 'Unlatching power channel #%d' %(channel)
@@ -349,11 +354,11 @@ def ReadRTD(PowerUnitID, SensorID):
     I2CData = [0x1 << (SensorID - 1), 0x1, 0xFF]
     NumOfBytesToRead = 2
     WriteToDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, *I2CData)
-    time.sleep(0.05)
+    time.sleep(0.06)
     ResistanceValue = ReadFromDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, NumOfBytesToRead)
     I2CData = [0x1 << (SensorID - 1), 0x2, 0xFF]
     WriteToDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, *I2CData)
-    time.sleep(0.05)
+    time.sleep(0.06)
     ResistanceValue[0] = ((ResistanceValue[0] & 0xFF) << 7) | ((0xFF & ReadFromDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, NumOfBytesToRead)[0])>>1)
     TemperatureValue = (ResistanceValue[0] - 8192.)/31.54
 

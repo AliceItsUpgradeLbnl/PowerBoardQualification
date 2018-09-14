@@ -3,7 +3,7 @@
 import sqlite3 as lite
 import PowerboardTestData as data
 
-dbFile = "/home/its/Desktop/powerboard_8channel_tests/PB_8-channel/scripts/LargeScaleTest/TestData.db"
+dbFile = "/home/its/Desktop/PB-production/PB_production/scripts/LargeScaleTest/TestData.db"
 
 def fillDBFromFiles(filenames, directory):
 	testInfo = data.TestInfo()
@@ -15,7 +15,7 @@ def fillDBFromFiles(filenames, directory):
 	biasVoltageScanFile = None
 	temperatureScanFile = None
 	latchupTestFile = None
-	visualSmokeFile = None
+	preliminaryTestFile = None
 
 	for filename in filenames:
 		testName = filename.split("_")[6]
@@ -30,7 +30,7 @@ def fillDBFromFiles(filenames, directory):
 		elif (testName == "LatchupTest" or testName == "LachupTest"):
 			latchupTestFile = filename
 		elif (testName == "PreliminaryTest"):
-			visualSmokeFile = filename
+			preliminaryTestFile = filename
 
 	if thresholdScanFile:
 		thresholdScan = data.ThresholdScan()
@@ -57,10 +57,10 @@ def fillDBFromFiles(filenames, directory):
 		latchupTest.readFile(directory + latchupTestFile)
 		fillScan(latchupTest, "LatchupTest", testInfo.Id)
 
-	if visualSmokeFile:
-		with open(directory + visualSmokeFile, 'r') as file:
+	if preliminaryTestFile:
+		with open(directory + preliminaryTestFile, 'r') as file:
 			result = file.read()
-			fillVisualAndSmoke(testInfo.Id, result)
+			fillPreliminaryTest(testInfo.Id, result)
 
 
 def getTestId(boardNumber, testName):
@@ -132,7 +132,7 @@ def fillScan(scan, testName, testId):
 			cur.execute(*_buildInsert(step, testName, testId))
 
 
-def fillVisualAndSmoke(testId, result):
+def fillPreliminaryTest(testId, result):
 	con = lite.connect(dbFile)
 	with con:
 		cur = con.cursor()
@@ -216,7 +216,7 @@ def createDB():
 				AfterEnabling INTEGER,
 				AfterLatching INTEGER
 			);
-			CREATE TABLE IF NOT EXISTS VisualAndSmoke(
+			CREATE TABLE IF NOT EXISTS PreliminaryTest(
 				Id INTEGER,
 				Result TEXT
 			);

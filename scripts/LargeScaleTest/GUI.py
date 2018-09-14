@@ -10,7 +10,6 @@ import signal
 import time
 import shutil
 import subprocess
-import json
 from definitions import WriteToDevice
 from definitions import ReadFromDevice
 from definitions import ReadRSFromDevice
@@ -18,7 +17,7 @@ from definitions import ReadRSFromDevice
 from BkPrecision168xInterface import BkPrecision168xInterface
 from PowerUtils import *
 from I2CTest import I2CTest
-from LatchStatusCheck import *
+from LatchTest import *
 from VoltageScan import *
 from ThresholdScan import *
 from TemperatureTest import* 
@@ -87,19 +86,8 @@ class Application(tk.Frame):
 
         self.PowerUnitID = "Right"        
 
-        config = {}
         PowerBoardIdIndexDict = {'Right': 1, 'Left': 2}
         self.biasPs = BkPrecision168xInterface()
-        # get the most recent configuration file
-        files = os.listdir(configurationFolder)
-        prefix = 'config'
-        # the integer casting is necessary to sort properly
-        numbers = [int(f[len(prefix):]) for f in files if f.startswith(prefix) and not f.endswith('~')]
-        configNumber = max(numbers)
-        configurationFile = configurationFolder + prefix + str(configNumber)
-
-        with open(configurationFile) as f:
-            config = json.load(f)
 
         #self.test_names= ["CH#%i"%n for n in range(16)]
         self.boxes    = []
@@ -309,15 +297,14 @@ class Application(tk.Frame):
         ## Test methods ###########################################
 
         def PreliminaryTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+            CleanTestReportEntry(PowerUnitID)
+
             os.system('clear')
             print "========================================================================================="
             print "                   Starting preliminary test on Power Unit %s ........." %(PowerUnitID)
             print "========================================================================================="
             print " "
             print " "
-
-            temporaryFile = "JUNK/PreliminaryTest_PowerUnit%s.txt" %(PowerUnitID)
-            if os.path.exists(temporaryFile): os.remove(temporaryFile)
 
             passed = True
 
@@ -341,11 +328,7 @@ class Application(tk.Frame):
             TurnOffPower(PowerUnitID)
             TurnOffBias()
              
-            CleanTestReportEntry(PowerUnitID)
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(0, passed)])
-            if saveToFile and passed:
-            	outputFile = buildOutputFilename(timestamp, "PreliminaryTest", PowerUnitID)
-                subprocess.call(['/bin/bash', "-c", "cp %s %s" %(temporaryFile, outputFile)])
 
             print " "
             print " "
@@ -392,11 +375,11 @@ class Application(tk.Frame):
 
             return passed
 
-        def RunLatchupCheck(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+        def RunLatchupTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
-            if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
-                return
+            #if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
+            #    return
             os.system('clear')
             print "========================================================================================="
             print "                Starting Latch Up Scan on Power Unit %s ........." %(PowerUnitID)
@@ -410,7 +393,7 @@ class Application(tk.Frame):
             with open(temporaryFile,"ab") as f:
                 f.write(str(header) + "\n")
             sleep = config["LatchTest_sleep"]		
-            passed = LatchUpCheck(temporaryFile, sleep, PowerBoardIdIndexDict[PowerUnitID])
+            passed = LatchTest(temporaryFile, sleep, PowerBoardIdIndexDict[PowerUnitID])
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(2, passed)])
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "Latchtest", PowerUnitID)
@@ -439,24 +422,15 @@ class Application(tk.Frame):
 
             temporaryFile = "JUNK/BiasVoltageScan_PowerUnit%s.txt" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
-            isMaster = True
-            Vstep = config["BiasScan_Vstep"]
-            start = config["BiasScan_start"]
-            end = config["BiasScan_end"]
-            sleep = config["BiasScan_sleep"]
-            samplingtime = config["BiasScan_samplingtime"]
-            nsamples = config["BiasScan_nsamples"]
 
-            header = "Vset [DAC] V [V] VRMS [V] dV[mV] I [A] IRMS [A] dI[mA] R [ohm] T[C]"
-            with open(temporaryFile,"ab") as f:
-                f.write(str(header) + "\n")
-            BiasVoltageScan(temporaryFile, Vstep, start, end, samplingtime, nsamples, sleep, PowerBoardIdIndexDict[PowerUnitID])
+            BiasVoltageScan(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID])
 
-            bvsData = PbData.BiasVoltageScan() 
+            bvsData = PbData.BiasVoltageScan(load.get()) 
             bvsData.readFile(temporaryFile)
-            bvsHasProblem = bvsData.visualizeAndCheck()
-            passed = not bvsHasProblem
+            passed = not bvsData.visualizeAndCheck()
+
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(3, passed)])
+
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "BiasVoltageScan", PowerUnitID)
                 subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
@@ -482,32 +456,17 @@ class Application(tk.Frame):
             print " "
             print " "
 
-            Vstep  = config["PowerScan_Vstep"]
-            start  = config["PowerScan_start"]
-            end    = config["PowerScan_end"]
-            samplingtime = config["PowerScan_samplingtime"]
-            nsamples = config["PowerScan_nsamples"]
-            sleep = config["PowerScan_sleep"]
-            header = "CH# Vset[DAC]   V[V]    dVRMS[mV] dVpp[mV]    I[A]  dIRMS[mA] dIpp[mA]   R[ohm]   T[C]   State" 
-
             temporaryFile = "JUNK/PowerVoltageScan_PowerUnit%s.txt" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
-            with open(temporaryFile,"ab") as f:
-                f.write(str(header) + "\n")
-            PowerVoltageScan(temporaryFile, Vstep, start, end, samplingtime, nsamples, sleep, PowerBoardIdIndexDict[PowerUnitID])
 
-            vsData = PbData.VoltageScan() 
+            PowerVoltageScan(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID])
+
+            vsData = PbData.VoltageScan(load.get()) 
             vsData.readFile(temporaryFile)
-            plotOption = VoltageScanPlotOption.get()
+            passed = not vsData.visualizeAndCheck(True)
 
-            vsHasProblem = False
-            if (plotOption == 1):
-               vsHasProblem = vsData.visualizeAndCheck()
-            elif (plotOption == 2):
-               vsHasProblem = vsData.visualizeAndCheck(True)
-
-            passed = not vsHasProblem
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(4, passed)])
+
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "VoltageScan", PowerUnitID)
                 subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
@@ -525,6 +484,7 @@ class Application(tk.Frame):
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
+
             os.system('clear')
             print "========================================================================================="
             print "                Starting Threshold Scan on Power Unit %s ........." %(PowerUnitID)
@@ -532,19 +492,19 @@ class Application(tk.Frame):
             print " "
             print " "
 
-            step  = config["ThresholdScan_Thstep"]
-            start = config["ThresholdScan_start"]
-            end   = config["ThresholdScan_end"]
-	    Vset  = config["ThresholdScan_Vpoints"]
-            header = "CH# Threshold[DAC] Vset[DAC] V[V] I[A]  R[ohm] T[C] LUstate"
             temporaryFile = "JUNK/ThresholdScan_PowerUnit%s.txt" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
-            with open(temporaryFile,"ab") as f:
-                f.write(str(header) + "\n")
-            for V in Vset:
-                thresholdScanAll(temporaryFile, step, start, end, V, PowerBoardIdIndexDict[PowerUnitID])
-            passed = False
+
+            passed = True
+
+            ThresholdScan(temporaryFile, V, load.get(), PowerBoardIdIndexDict[PowerUnitID])
+
+            tsData = PbData.ThresholdScan(load.get()) 
+            tsData.readFile(temporaryFile)
+            passed = not tsData.visualizeAndCheck()
+
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(5, passed)])
+
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "ThresholdScan", PowerUnitID)
                 subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
@@ -562,6 +522,7 @@ class Application(tk.Frame):
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
+
             os.system('clear')
             print "========================================================================================="
             print "         Starting over-temperature protection test on Power Unit %s ........." %(PowerUnitID)
@@ -571,14 +532,8 @@ class Application(tk.Frame):
 
             temporaryFile = "JUNK/TemperatureScan_PowerUnit%s.txt" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
-            header = "Vavg[V] Itot[A] T[C]"
-            with open(temporaryFile,"ab") as f:
-                f.write(str(header) + "\n")
 
-            timestep = config["TemperatureScan_timestep"]
-            Vset = config["TemperatureScan_Vset"]
-
-            passed = TemperatureTest(temporaryFile, timestep, PowerBoardIdIndexDict[PowerUnitID], Vset)
+            passed = TemperatureTest(temporaryFile, PowerBoardIdIndexDict[PowerUnitID], Vset)
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(6, passed)])
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "TemperatureScan", PowerUnitID)
@@ -620,7 +575,7 @@ class Application(tk.Frame):
                     for PowerUnitID in PowerUnitIDs:
                         PowerCycleBias()
                         PowerCyclePower(PowerUnitID)
-		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchupCheck(timestamp, saveToFile, PowerUnitID)) << 1)
+		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchTest(timestamp, saveToFile, PowerUnitID)) << 1)
                 for PowerUnitID in PowerUnitIDs:
 	            testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 2)
 		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 3)
@@ -878,8 +833,6 @@ class Application(tk.Frame):
         ################################################################################################
         ######## SELECT VOLTAGE SCAN PLOTTING OPTION ###################################################
         ################################################################################################
-        VoltageScanPlotOption = tk.IntVar()
-        VoltageScanPlotOption.set(2)
 
         ######### RUN Preliminary test  ###########################################################
         PrelTest = tk.Button(self, text="Preliminary test", command = PreliminaryTests, bg = 'salmon')
@@ -930,32 +883,32 @@ class Application(tk.Frame):
         #######################################################################################
 
         ###########TEMPERATURE SCAN########################################
-        TemperatureButton = tk.Button(self, text = "O-Temperature test", command = lambda: RunOverTprotectionScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True, PowerUnitID=self.PowerUnitID))
+        TemperatureButton = tk.Button(self, text = "O-Temperature test", command = lambda: RunOverTprotectionScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
         TemperatureButton.grid(row = 7, column = 4, sticky = 'nsew')
         ##########################################################################################
 
         ### I2C ###########################################################
-        I2CButton = tk.Button(self, text="I2C test", command = lambda: RunI2CTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True, PowerUnitID=self.PowerUnitID))
+        I2CButton = tk.Button(self, text="I2C test", command = lambda: RunI2CTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
         I2CButton.grid(row = 7, column = 5, sticky = 'nsew')
         ###################################################################
 
         ###########LATCH STATUS CHECK########################################
-        LatchupStatusButton = tk.Button(self, text = "Latch test", command = lambda: RunLatchupCheck(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True, PowerUnitID=self.PowerUnitID))
+        LatchupStatusButton = tk.Button(self, text = "Latch test", command = lambda: RunLatchupTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
         LatchupStatusButton.grid(row = 7, column = 6, sticky = 'nsew')
         ##########################################################################################
 
         ######### BIAS VOLTAGE SCAN ###################################################################
-        BiasVoltageScanButton = tk.Button(self, text="Bias scan", command = lambda: RunBiasVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True, PowerUnitID=self.PowerUnitID))
+        BiasVoltageScanButton = tk.Button(self, text="Bias scan", command = lambda: RunBiasVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
         BiasVoltageScanButton.grid(row = 8, column = 4, sticky = 'nsew')
         ###########################################################################################
 
         ######### POWER VOLTAGE SCAN ###################################################################
-        PowerVoltageButton = tk.Button(self, text="Power scan", command = lambda: RunPowerVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True, PowerUnitID=self.PowerUnitID))
+        PowerVoltageButton = tk.Button(self, text="Power scan", command = lambda: RunPowerVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
         PowerVoltageButton.grid(row = 8, column = 5, sticky = 'nsew')
         ###########################################################################################
 
         ###########THRESHOLD SCAN########################################
-        ThresholdScanButton = tk.Button(self, text = "Threshold scan", command = lambda: RunThresholdScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True, PowerUnitID=self.PowerUnitID))
+        ThresholdScanButton = tk.Button(self, text = "Threshold scan", command = lambda: RunThresholdScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
         ThresholdScanButton.grid(row = 8, column = 6, sticky = 'nsew')
         #############################################################################
 
@@ -996,17 +949,17 @@ class Application(tk.Frame):
         ###################################################################################
 
         ########### PLOT VOLTAGE SCAN BUTTON ########################################
-        PlotVoltageScanButton = tk.Button(self, text = "Plot Power scan", command = lambda: PlotPowerVoltageScanData('JUNK/PowerVoltageScan_PowerUnitRight.txt'))
+        PlotVoltageScanButton = tk.Button(self, text = "Plot Power scan", command = lambda: PlotPowerVoltageScanData('JUNK/PowerVoltageScan_PowerUnitRight.txt', load.get()))
         PlotVoltageScanButton.grid(row = 14, column = 6, sticky = 'nsew')
         #############################################################################
 
         ########### PLOT BIAS SCAN BUTTON ###########################################
-        PlotBiasScanButton = tk.Button(self, text = "Plot Bias scan", command = lambda: PlotBiasVoltageScanData('JUNK/BiasVoltageScan_PowerUnitRight.txt'))
+        PlotBiasScanButton = tk.Button(self, text = "Plot Bias scan", command = lambda: PlotBiasVoltageScanData('JUNK/BiasVoltageScan_PowerUnitRight.txt', load.get()))
         PlotBiasScanButton.grid(row = 15, column = 6, sticky = 'nsew')
         #############################################################################
 
         ########### PLOT THRESHOLD SCAN BUTTON ######################################
-        PlotThresholdScanButton = tk.Button(self, text = "Plot Thres scan", command = lambda: PlotThresholdScanData('JUNK/ThresholdScan_PowerUnitRight.txt'))
+        PlotThresholdScanButton = tk.Button(self, text = "Plot Thres scan", command = lambda: PlotThresholdScanData('JUNK/ThresholdScan_PowerUnitRight.txt', load.get()))
         PlotThresholdScanButton.grid(row = 16, column = 6, sticky = 'nsew')
         #############################################################################
 
@@ -1018,17 +971,17 @@ class Application(tk.Frame):
         ###################################################################################
 
         ########### PLOT VOLTAGE SCAN BUTTON ########################################
-        PlotVoltageScanButton = tk.Button(self, text = "Plot Power scan", command = lambda: PlotPowerVoltageScanData('JUNK/PowerVoltageScan_PowerUnitLeft.txt'))
+        PlotVoltageScanButton = tk.Button(self, text = "Plot Power scan", command = lambda: PlotPowerVoltageScanData('JUNK/PowerVoltageScan_PowerUnitLeft.txt', load.get()))
         PlotVoltageScanButton.grid(row = 22, column = 6, sticky = 'nsew')
         #############################################################################
 
         ########### PLOT BIAS SCAN BUTTON ###########################################
-        PlotBiasScanButton = tk.Button(self, text = "Plot Bias scan", command = lambda: PlotBiasVoltageScanData('JUNK/BiasVoltageScan_PowerUnitLeft.txt'))
+        PlotBiasScanButton = tk.Button(self, text = "Plot Bias scan", command = lambda: PlotBiasVoltageScanData('JUNK/BiasVoltageScan_PowerUnitLeft.txt', load.get()))
         PlotBiasScanButton.grid(row = 23, column = 6, sticky = 'nsew')
         #############################################################################
 
         ########### PLOT THRESHOLD SCAN BUTTON ######################################
-        PlotThresholdScanButton = tk.Button(self, text = "Plot Thres scan", command = lambda: PlotThresholdScanData('JUNK/ThresholdScan_PowerUnitLeft.txt'))
+        PlotThresholdScanButton = tk.Button(self, text = "Plot Thres scan", command = lambda: PlotThresholdScanData('JUNK/ThresholdScan_PowerUnitLeft.txt', load.get()))
         PlotThresholdScanButton.grid(row = 24, column = 6, sticky = 'nsew')
         #############################################################################
 

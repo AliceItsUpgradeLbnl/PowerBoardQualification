@@ -2,8 +2,14 @@
 import time
 
 from UsefulFunctions import *
+from math import sqrt
 
-def TemperatureTest(output, timestep = 0.5, PowerUnitID = 1, Vset=125):
+def TemperatureTest(output, PowerUnitID = 1, Vset=125):
+    # Writing header to output file
+    header = "Vavg[V] Itot[A] T[C]"
+    with open(output,"ab") as f:
+        f.write(str(header) + "\n")
+
     # Starts communication with RDO board
     OpenFtdi()
 
@@ -17,7 +23,7 @@ def TemperatureTest(output, timestep = 0.5, PowerUnitID = 1, Vset=125):
     time.sleep(0.5)
     RaiseThresholdsToMax(PowerUnitID) #to avoid latching
     UnlatchPowerAll(PowerUnitID)   # Unlatch all channels
-    time.sleep(1.0)
+    time.sleep(0.5)
   
     # Defining some initial variables
     boardSensorID  = 1
@@ -31,12 +37,23 @@ def TemperatureTest(output, timestep = 0.5, PowerUnitID = 1, Vset=125):
     LUinitialstate = GetPowerLatchStatus(PowerUnitID)
     passed         = (LUinitialstate == 0b1111111111111111)
 
+    TboardfirstSamples = [ReadRTD(PowerUnitID, boardSensorID) for x in range(10)]
+    Taux1firstSamples  = [ReadRTD(PowerUnitID, aux1SensorID) for x in range(10)]
+    Taux2firstSamples  = [ReadRTD(PowerUnitID, aux2SensorID) for x in range(10)]
+    Tboardfirst = sum(TboardfirstSamples)/10.
+    TboardfirstRms = sqrt(sum([(x - TboardfirstRms)^2 for x in TboardfirstSamples])/10.)
+    Taux1first  = sum(Taux1firstSamples)/10.
+    Taux1firstRms = sqrt(sum([(x - Taux1firstRms)^2 for x in Taux1firstSamples])/10.)
+    Taux2first  = sum(Taux2firstSamples)/10.
+    Taux2firstRms = sqrt(sum([(x - Taux2firstRms)^2 for x in Taux2firstSamples])/10.)
+    if any([x > 0.1 for x in [TboardfirstRms, Taux1firstRms, Taux2firstRms]]):
+        passed = False
+    if any([abs(x - 25.) > 5. for x in [Tboardfirst, Taux1first, Taux2first]]):
+        passed = False
+    
     print ' '
     print 'Printing results:' 
     print "Vavg[V]     Itot[A]     Tboard[C]     Taux1[C]     Taux2[C]     LUstate"
-    Tboardfirst = ReadRTD(PowerUnitID, boardSensorID)
-    Taux1first = ReadRTD(PowerUnitID, boardSensorID)
-    Taux2first = ReadRTD(PowerUnitID, boardSensorID)
     while not Triggered:
         Tboard = ReadRTD(PowerUnitID, boardSensorID)
         Taux1  = ReadRTD(PowerUnitID, aux1SensorID)
@@ -64,6 +81,6 @@ def TemperatureTest(output, timestep = 0.5, PowerUnitID = 1, Vset=125):
     CloseFtdi()
 
     # Test is passed if the last temperature of the board is 70C and the other two temperatures are within 5 degrees of 25C
-    passed = passed and (Tboardlast > 60.) and (Tboardlast < 70.) and (abs(Tboardfirst - 25.) < 5.) and abs(Taux1first - 25.) < 5.) and (abs(Taux2first - 25.) < 5.)
+    passed = passed and (Tboardlast > 60.) and (Tboardlast < 70.) 
 
     return passed

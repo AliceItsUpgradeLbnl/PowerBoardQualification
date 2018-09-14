@@ -3,11 +3,23 @@ __author__ = "M.Arratia"
 __version__ = "2.0"
 __status__ = "Prototype"
 
-from UsefulFunctions import *
-
 import numpy as np
 
-def PowerVoltageScan(output, step, start, end, SamplingTime, Nsamples, sleep, PowerUnitID):
+from UsefulFunctions import *
+import ReadConfig
+
+
+def PowerVoltageScan(output, load, PowerUnitID):
+    # Config params
+    config = ReadConfig.GetMostRecentConfig('LargeScaleTest/ScanConfig/')
+    step     = config["PowerScan_Vstep"]
+    start    = config["PowerScan_start"]
+    end      = config["PowerScan_end"]
+    Nsamples = config["PowerScan_nsamples"]
+
+    header   = "CH# Vset[DAC]   V[V]    dVRMS[mV] dVpp[mV]    I[A]  dIRMS[mA] dIpp[mA]   R[ohm]   T[C]   State" 
+    with open(output,"ab") as f:
+        f.write(str(header) + "\n")
 
     OpenFtdi() # Starts communication with RDO board
 
@@ -31,11 +43,12 @@ def PowerVoltageScan(output, step, start, end, SamplingTime, Nsamples, sleep, Po
     ConfigurePowerADC(PowerUnitID) 
 
     #print "#ch Vset [DAC] V [V] VRMS [mV] dV[mV] I [A] IRMS [mA] dI [mA] R [ohm] T[C]"
+    passed = True
     for voltage in range(start, end, -1*step): #loop over voltages
         print ' '
-	print 'Setting voltage of all channels to %f [V] and sleeping %f [s]' %(voltage, sleep)
+	print 'Setting voltage of all channels to %f [V]' %(voltage)
         SetPowerVoltageAll(voltage, PowerUnitID)
-        time.sleep(sleep)
+        time.sleep(0.2)
         LUstate = GetPowerLatchStatus(PowerUnitID)
         if LUstate == 0x00: break
         Imatrix = np.zeros((Nsamples,16))
@@ -59,7 +72,7 @@ def PowerVoltageScan(output, step, start, end, SamplingTime, Nsamples, sleep, Po
             DeltaI  = 1000*(Ipoints.max()-Ipoints.min())
 	    DeltaV  = 1000*(Vpoints.max()-Vpoints.min())
 	    rload   = -666
-	    if(Iread>0): rload = Vread/Iread
+	    if(Iread > 0.): rload = Vread/Iread
             line = "%2d %7d %10.4f %8.1f %9.1f %10.4f %8.1f %6.1f %11.3f %6.1f %20s" % (ch, voltage, Vread, VRMS, DeltaV, Iread, IRMS, DeltaI, rload, T, str(bin(LUstate)))
         
             print line
@@ -73,9 +86,20 @@ def PowerVoltageScan(output, step, start, end, SamplingTime, Nsamples, sleep, Po
 
     CloseFtdi() # Ends communication with RDO board
 
-    return
+    return passed
 
-def BiasVoltageScan(output, step, start, end, SamplingTime, Nsamples, sleep, PowerUnitID):
+def BiasVoltageScan(output, load, PowerUnitID):
+    # Config params
+    config = ReadConfig.GetMostRecentConfig('LargeScaleTest/ScanConfig/')
+    step = config["BiasScan_Vstep"]
+    start = config["BiasScan_start"]
+    end = config["BiasScan_end"]
+    nsamples = config["BiasScan_nsamples"]
+
+    header = "Vset [DAC] V [V] VRMS [V] dV[mV] I [A] IRMS [A] dI[mA] R [ohm] T[C]"
+    with open(output,"ab") as f:
+        f.write(str(header) + "\n")
+
     # Starts communication with RDO board
     OpenFtdi() 
 
@@ -84,16 +108,22 @@ def BiasVoltageScan(output, step, start, end, SamplingTime, Nsamples, sleep, Pow
 
     print 'Setting Bias Voltage ' 
     SetBiasVoltage(0,PowerUnitID)
-    UnlatchBiasAll(PowerUnitID)
+    biasMask = 0
+    if (load == "Low"):
+        biasMask = 0x7
+    else:
+        biasMask = 0xF
+    UnlatchBiasWithMask(biasMask, PowerUnitID)
 
     ConfigureBiasADC(PowerUnitID) # this is necessary to be able to read ADCs
     time.sleep(0.2)
     print " "
     print "Scanning voltages and printing results:"
     print "Vset[DAC]   V[V]      dVRMS[V]   dVpp[mV]   I[A]     dIRMS[A]   dIpp[mA]   R[ohm]   T[C]     State"
+    passed = True
     for voltage in range(start, end , -1*step):
         SetBiasVoltage(voltage, PowerUnitID)
-        time.sleep(sleep)
+        time.sleep(0.2)
         
         Ipoints = np.array([])
 	Vpoints = np.array([])
@@ -109,10 +139,10 @@ def BiasVoltageScan(output, step, start, end, SamplingTime, Nsamples, sleep, Pow
         DeltaI = 1000*(Ipoints.max()-Ipoints.min())
 	DeltaV = 1000*(Vpoints.max()-Vpoints.min())
         rload = -1
-	if(Iread>0): rload = Vread/Iread
+	if(Iread > 0.): rload = Vread/Iread
 
         T = ReadRTD(PowerUnitID, 1)
-        state = bin((1 << 4) - 1 - int(GetBiasLatchStatus(PowerUnitID), 2)) # bitwise not because all bits are active low
+        state = bin(0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)) # bitwise not because all bits are active low
         line = "%5d %12.4f %8.1f %10.1f %11.4f %7.1f %11.1f %9.1f %7.1f %10s" % (voltage, Vread, VRMS, DeltaV, Iread, IRMS, DeltaI, abs(rload), T, state)
         print line
 
@@ -125,4 +155,4 @@ def BiasVoltageScan(output, step, start, end, SamplingTime, Nsamples, sleep, Pow
     # Ends communication with RDO board
     CloseFtdi() 
 
-    return
+    return passed

@@ -1,0 +1,2 @@
+Voltages/Currents OK
+Smoke test OK
