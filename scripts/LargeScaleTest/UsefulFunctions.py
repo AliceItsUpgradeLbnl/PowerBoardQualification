@@ -47,7 +47,7 @@ def I2CLink(PowerUnitID, LinkType):
         sys.exit(1)
 
 def RaiseThresholdsToMax(PowerUnitID):
-    print 'Raising thresholds of all channels to maximum...' 
+    print 'Raising all thresholds to maximum value ...' 
 
     LinkType = ThresPowerLink
     I2CData = [0x3F, 0xFF, 0xFF]
@@ -57,7 +57,7 @@ def RaiseThresholdsToMax(PowerUnitID):
     WriteToDevice(I2CLink(PowerUnitID, LinkType), ThresPowerAddress[3], *I2CData)
 
 def LowerThresholdsToMin(PowerUnitID):
-    print 'Lowering thresholds of all channels to minimum...' 
+    print 'Lowering all thresholds to minimum value ...' 
 
     LinkType = ThresPowerLink
     I2CData = [ 0x3F, 0x00, 0x00]

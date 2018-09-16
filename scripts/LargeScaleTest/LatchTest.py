@@ -1,7 +1,16 @@
 from UsefulFunctions import*
 import math
 
-def LatchTest(output, sleep, PowerUnitID):
+def LatchTest(output, PowerUnitID):
+    # Config params
+    config = ReadConfig.GetMostRecentConfig('LargeScaleTest/ScanConfig/')
+    minrc = config["LatchTest_minrc"]		
+    maxrc = config["LatchTest_maxrc"]		
+
+    header = "CH# Before Enabling / After Enabling / After Latching"
+    with open(output,"ab") as f:
+	f.write(str(header) + "\n")
+
     OpenFtdi() # Starts communication with RDO board
 
     ConfigurePowerADC(PowerUnitID) # To be able to read out voltages and currents
@@ -34,7 +43,7 @@ def LatchTest(output, sleep, PowerUnitID):
         I2CAddress     = IOExpanderPowerAddress[channel/8]
         I2CData   = [0xFF & (1 << channel%8)]
         AppendWriteToDevice(ListOfCommands, I2CLink(PowerUnitID, LinkType), I2CAddress, *I2CData)
-        AppendSleep(ListOfCommands, 5000) # 7 ms (10 ms RC is nominal, 8ms is -20%, taking 1ms lower margin)
+        AppendSleep(ListOfCommands, minrc * 1000) # 7 ms (10 ms RC is nominal, 8ms is -20%, taking 1ms lower margin)
         LinkType       = ThresPowerLink 
         I2CAddress     = ThresPowerAddress[channel/4]
         I2CData   = [0x3F, 0xFF, 0xF0]
@@ -56,7 +65,7 @@ def LatchTest(output, sleep, PowerUnitID):
         I2CAddress     = IOExpanderPowerAddress[channel/8]
         I2CData   = [0xFF & (1 << channel%8)]
         AppendWriteToDevice(ListOfCommands, I2CLink(PowerUnitID, LinkType), I2CAddress, *I2CData)
-        AppendSleep(ListOfCommands, 13000) # 13 ms (10 ms RC is nominal, 12ms is +20%, taking 1ms higher margin)
+        AppendSleep(ListOfCommands, maxrc * 1000) # 13 ms (10 ms RC is nominal, 12ms is +20%, taking 1ms higher margin)
         LinkType       = ThresPowerLink 
         I2CAddress     = ThresPowerAddress[channel/4]
         I2CData   = [0x3F, 0xFF, 0xF0]

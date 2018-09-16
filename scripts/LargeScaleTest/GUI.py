@@ -30,7 +30,10 @@ import FileHandler
 import PowerboardTestData as PbData
 
 outputFolder = 'RESULTS/'
-configurationFolder = 'LargeScaleTest/ScanConfig/'
+
+#import ReadParams
+
+#params = ReadParams.GetMostRecentParams('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/ScanParams/')
 
 class StopTest(Exception):
     pass
@@ -296,7 +299,7 @@ class Application(tk.Frame):
 
         ## Test methods ###########################################
 
-        def PreliminaryTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+        def PreliminaryTest(PowerUnitID=self.PowerUnitID):
             CleanTestReportEntry(PowerUnitID)
 
             os.system('clear')
@@ -316,14 +319,10 @@ class Application(tk.Frame):
             # Voltages and current measurement after power on for the first time
             if not (CheckPowerStatus(PowerUnitID) and CheckBiasStatus()):
                 passed = False
-            else:
-                with open(temporaryFile,"ab") as f: f.write("Voltages/Currents OK\n")
 
             # Ask user if any damage was found on the power unit
             if not tkMessageBox.askyesno("Polarized components status", "Smoke test Run for 2s per on Power Unit %s, is the board OK?" %(PowerUnitID)):
                 passed = False
-            else:
-                with open(temporaryFile,"ab") as f: f.write("Smoke test OK\n")
 
             TurnOffPower(PowerUnitID)
             TurnOffBias()
@@ -344,7 +343,7 @@ class Application(tk.Frame):
             if passed:
             	PrelTest.config(bg='green')
 
-        def RunI2CTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+        def RunI2CTest(PowerUnitID=self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
@@ -357,15 +356,9 @@ class Application(tk.Frame):
             print " "
             print " "
 
-            temporaryFile = "JUNK/I2CTest_PowerUnit%s.txt" %(PowerUnitID)
-            if os.path.exists(temporaryFile): os.remove(temporaryFile)
             passed = I2CTest(PowerBoardIdIndexDict[PowerUnitID])
-            if passed: 
-                with open(temporaryFile,"ab") as f: f.write("All I2C transactions successful\n")
+
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(1, passed)])
-            if saveToFile and passed:
-                outputFile = buildOutputFilename(timestamp, "I2CTest", PowerUnitID)
-                subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
              
             print " "
             print " "
@@ -375,26 +368,26 @@ class Application(tk.Frame):
 
             return passed
 
-        def RunLatchupTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+        def RunLatchTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
-            #if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
-            #    return
+            if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
+                return
+
             os.system('clear')
             print "========================================================================================="
-            print "                Starting Latch Up Scan on Power Unit %s ........." %(PowerUnitID)
+            print "                Starting Latch test on Power Unit %s ........." %(PowerUnitID)
             print "========================================================================================="
             print " "
             print " "
 
             temporaryFile = "JUNK/LatchTest_PowerUnit%s.txt" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
-            header = "CH# Before Enabling / After Enabling / After Latching"
-            with open(temporaryFile,"ab") as f:
-                f.write(str(header) + "\n")
-            sleep = config["LatchTest_sleep"]		
-            passed = LatchTest(temporaryFile, sleep, PowerBoardIdIndexDict[PowerUnitID])
+
+            passed = LatchTest(temporaryFile, PowerBoardIdIndexDict[PowerUnitID])
+
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(2, passed)])
+
             if saveToFile and passed:
             	outputFile = buildOutputFilename(timestamp, "Latchtest", PowerUnitID)
                 subprocess.call(['/bin/bash', "-c", "cp %s %s" %(temporaryFile, outputFile)])
@@ -402,7 +395,7 @@ class Application(tk.Frame):
             print " "
             print " "
             print "========================================================================================="
-            print "                        Latch Up Scan ended. Test passed? ", passed
+            print "                        Latch test ended. Test passed? ", passed
             print "========================================================================================="
 
             return passed
@@ -497,7 +490,7 @@ class Application(tk.Frame):
 
             passed = True
 
-            ThresholdScan(temporaryFile, V, load.get(), PowerBoardIdIndexDict[PowerUnitID])
+            ThresholdScan(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID])
 
             tsData = PbData.ThresholdScan(load.get()) 
             tsData.readFile(temporaryFile)
@@ -571,7 +564,7 @@ class Application(tk.Frame):
                     for PowerUnitID in PowerUnitIDs:
                         PowerCycleBias()
                         PowerCyclePower(PowerUnitID)
-		        testResults[PowerUnitID] = testResults[PowerUnitID] | RunI2CTest(timestamp, saveToFile, PowerUnitID)
+		        testResults[PowerUnitID] = testResults[PowerUnitID] | RunI2CTest(timestamp, PowerUnitID)
                     for PowerUnitID in PowerUnitIDs:
                         PowerCycleBias()
                         PowerCyclePower(PowerUnitID)
@@ -683,7 +676,7 @@ class Application(tk.Frame):
 
         # testMap: bitmap of the implemented tests (integer):
         # 0b000001: I2C test
-        # 0b000010: Latchup test
+        # 0b000010: Latch test
         # 0b000100: Bias Voltage scan
         # 0b001000: Power Voltage scan
         # 0b010000: Threshold scan
@@ -704,7 +697,7 @@ class Application(tk.Frame):
 
         # testNumber:
         # 1: I2C test
-        # 2: Latchup test
+        # 2: Latch test
         # 3: Bias Voltage scan
         # 4: Power Voltage scan
         # 5: Threshold scan
@@ -720,7 +713,7 @@ class Application(tk.Frame):
             elif (testNumber == 1):
                 return "I2C test " + testResult
             elif (testNumber == 2):
-                return "Latchup test " + testResult
+                return "Latch test " + testResult
             elif (testNumber == 3):
                 return "Bias Voltage scan " + testResult
             elif (testNumber == 4):
@@ -892,9 +885,9 @@ class Application(tk.Frame):
         I2CButton.grid(row = 7, column = 5, sticky = 'nsew')
         ###################################################################
 
-        ###########LATCH STATUS CHECK########################################
-        LatchupStatusButton = tk.Button(self, text = "Latch test", command = lambda: RunLatchupTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
-        LatchupStatusButton.grid(row = 7, column = 6, sticky = 'nsew')
+        ###########LATCH TEST########################################
+        LatchStatusButton = tk.Button(self, text = "Latch test", command = lambda: RunLatchTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
+        LatchStatusButton.grid(row = 7, column = 6, sticky = 'nsew')
         ##########################################################################################
 
         ######### BIAS VOLTAGE SCAN ###################################################################

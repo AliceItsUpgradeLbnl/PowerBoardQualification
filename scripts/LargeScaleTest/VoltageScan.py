@@ -11,7 +11,7 @@ import ReadConfig
 
 def PowerVoltageScan(output, load, PowerUnitID):
     # Config params
-    config = ReadConfig.GetMostRecentConfig('LargeScaleTest/ScanConfig/')
+    config = ReadConfig.GetMostRecentConfig('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/ScanConfig/')
     step     = config["PowerScan_Vstep"]
     start    = config["PowerScan_start"]
     end      = config["PowerScan_end"]
@@ -43,7 +43,6 @@ def PowerVoltageScan(output, load, PowerUnitID):
     ConfigurePowerADC(PowerUnitID) 
 
     #print "#ch Vset [DAC] V [V] VRMS [mV] dV[mV] I [A] IRMS [mA] dI [mA] R [ohm] T[C]"
-    passed = True
     for voltage in range(start, end, -1*step): #loop over voltages
         print ' '
 	print 'Setting voltage of all channels to %f [V]' %(voltage)
@@ -86,15 +85,13 @@ def PowerVoltageScan(output, load, PowerUnitID):
 
     CloseFtdi() # Ends communication with RDO board
 
-    return passed
-
 def BiasVoltageScan(output, load, PowerUnitID):
     # Config params
-    config = ReadConfig.GetMostRecentConfig('LargeScaleTest/ScanConfig/')
+    config = ReadConfig.GetMostRecentConfig('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/ScanConfig/')
     step = config["BiasScan_Vstep"]
     start = config["BiasScan_start"]
     end = config["BiasScan_end"]
-    nsamples = config["BiasScan_nsamples"]
+    Nsamples = config["BiasScan_nsamples"]
 
     header = "Vset [DAC] V [V] VRMS [V] dV[mV] I [A] IRMS [A] dI[mA] R [ohm] T[C]"
     with open(output,"ab") as f:
@@ -120,7 +117,6 @@ def BiasVoltageScan(output, load, PowerUnitID):
     print " "
     print "Scanning voltages and printing results:"
     print "Vset[DAC]   V[V]      dVRMS[V]   dVpp[mV]   I[A]     dIRMS[A]   dIpp[mA]   R[ohm]   T[C]     State"
-    passed = True
     for voltage in range(start, end , -1*step):
         SetBiasVoltage(voltage, PowerUnitID)
         time.sleep(0.2)
@@ -154,5 +150,3 @@ def BiasVoltageScan(output, load, PowerUnitID):
 
     # Ends communication with RDO board
     CloseFtdi() 
-
-    return passed
