@@ -11,7 +11,7 @@ import ReadConfig
 
 def PowerVoltageScan(output, load, PowerUnitID):
     # Config params
-    config = ReadConfig.GetMostRecentConfig('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/ScanConfig/')
+    config = ReadConfig.GetMostRecentConfig('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationConfig/')
     step     = config["PowerScan_Vstep"]
     start    = config["PowerScan_start"]
     end      = config["PowerScan_end"]
@@ -87,13 +87,13 @@ def PowerVoltageScan(output, load, PowerUnitID):
 
 def BiasVoltageScan(output, load, PowerUnitID):
     # Config params
-    config = ReadConfig.GetMostRecentConfig('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/ScanConfig/')
+    config = ReadConfig.GetMostRecentConfig('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationConfig/')
     step = config["BiasScan_Vstep"]
     start = config["BiasScan_start"]
     end = config["BiasScan_end"]
     Nsamples = config["BiasScan_nsamples"]
 
-    header = "Vset [DAC] V [V] VRMS [V] dV[mV] I [A] IRMS [A] dI[mA] R [ohm] T[C]"
+    header = "Vset[DAC]   V[V]      dVRMS[mV]   dVpp[mV]   I[A]     dIRMS[A]   dIpp[mA]   R[ohm]   T[C]     State"
     with open(output,"ab") as f:
         f.write(str(header) + "\n")
 
@@ -116,7 +116,7 @@ def BiasVoltageScan(output, load, PowerUnitID):
     time.sleep(0.2)
     print " "
     print "Scanning voltages and printing results:"
-    print "Vset[DAC]   V[V]      dVRMS[V]   dVpp[mV]   I[A]     dIRMS[A]   dIpp[mA]   R[ohm]   T[C]     State"
+    print "Vset[DAC]   V[V]      dVRMS[V]   dVpp[mV]   I[A]     dIRMS[mA]   dIpp[mA]   R[ohm]   T[C]     State"
     for voltage in range(start, end , -1*step):
         SetBiasVoltage(voltage, PowerUnitID)
         time.sleep(0.2)
@@ -139,7 +139,7 @@ def BiasVoltageScan(output, load, PowerUnitID):
 
         T = ReadRTD(PowerUnitID, 1)
         state = bin(0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)) # bitwise not because all bits are active low
-        line = "%5d %12.4f %8.1f %10.1f %11.4f %7.1f %11.1f %9.1f %7.1f %10s" % (voltage, Vread, VRMS, DeltaV, Iread, IRMS, DeltaI, abs(rload), T, state)
+        line = "%5d %12.4f %8.1f %10.1f %11.4f %7.1f %11.1f %9.1f %7.1f %9s" % (voltage, Vread, VRMS, DeltaV, Iread, IRMS, DeltaI, abs(rload), T, state)
         print line
 
         with open(output,"ab") as f:

@@ -17,13 +17,13 @@ from UsefulFunctions import *
 
 def ThresholdScan(output, Vset, PowerUnitID):
     # Config params
-    config = ReadConfig.GetMostRecentConfig('LargeScaleTest/ScanConfig/')
+    config = ReadConfig.GetMostRecentConfig('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationConfig/')
     step  = config["ThresholdScan_Thstep"]
     start = config["ThresholdScan_start"]
     end   = config["ThresholdScan_end"]
     voltages  = config["ThresholdScan_Vpoints"]
 
-    header = "CH# Threshold[DAC] Vset[DAC] V[V] I[A]  R[ohm] T[C] LUstate"
+    header = "CH# Threshold[DAC] Vset[DAC]     V[V]     I[A]     R[ohm]     T[C]           LUstate"
     with open(output,"ab") as f:
         f.write(str(header) + "\n")
 
@@ -131,7 +131,7 @@ def ThresholdScan(output, Vset, PowerUnitID):
 		Rload[channel] = vfloat[channel]/ifloat[channel]
 
 		T = ReadRTD(PowerUnitID, 1)
-                line = "%2d %4d %5d %04.4f %04.4f %04.4f %04.4f %s" % (channel, itrigger, Vset, vfloat[channel], ifloat[channel], Rload[channel], T, str(format(LUstate, '#016b')))
+                line = "%2d %10d %9d %13.4f %9.4f %8.4f %10.4f %022s" % (channel, itrigger, Vset, vfloat[channel], ifloat[channel], Rload[channel], T, format(int(LUstate), '#016b'))
                 with open(output,"ab") as f:
 		    f.write(str(line) + "\n")
 	    

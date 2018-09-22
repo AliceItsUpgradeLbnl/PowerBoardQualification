@@ -10,9 +10,9 @@ import signal
 import time
 import shutil
 import subprocess
-from definitions import WriteToDevice
-from definitions import ReadFromDevice
-from definitions import ReadRSFromDevice
+from Definitions import WriteToDevice
+from Definitions import ReadFromDevice
+from Definitions import ReadRSFromDevice
 
 from BkPrecision168xInterface import BkPrecision168xInterface
 from PowerUtils import *
@@ -26,14 +26,20 @@ from DataPlotter import PlotPowerVoltageScanData
 from DataPlotter import PlotBiasVoltageScanData
 from DataPlotter import PlotThresholdScanData
 
+from SummaryMethods import *
+
 import FileHandler
 import PowerboardTestData as PbData
 
-outputFolder = 'RESULTS/'
+configFolder = '/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationConfig/'
+paramsFolder = '/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationParams/'
 
-#import ReadParams
+outputFolder = './RESULTS/'
 
-#params = ReadParams.GetMostRecentParams('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/ScanParams/')
+import ReadConfig
+import ReadParams
+
+#params = ReadParams.GetMostRecentParams('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationParams/')
 
 class StopTest(Exception):
     pass
@@ -44,6 +50,8 @@ class Application(tk.Frame):
 
     def __init__(self, master=None):
         tk.Frame.__init__(self, master, relief = 'ridge', borderwidth = 2)
+        self.configNumber = ReadConfig.GetMostRecentConfigNumber(configFolder)
+
         self.grid(ipadx = 0, ipady = 0)
         root.protocol("WM_DELETE_WINDOW", self.disable_event)
 
@@ -87,6 +95,7 @@ class Application(tk.Frame):
         self.grid_columnconfigure(6, minsize = 130)
         self.grid_columnconfigure(7, minsize = 10)
 
+        self.summaryFile = ""
         self.PowerUnitID = "Right"        
 
         PowerBoardIdIndexDict = {'Right': 1, 'Left': 2}
@@ -100,14 +109,11 @@ class Application(tk.Frame):
         self.box_num  = 0
         self.BoardID = None
 
-        ch_vars = [0 for i in range(16)]
-
-        ch_en   = [0 for i in range(16)]
-
         ## Setters, getters and more ##############################
         def buildOutputFilename(timestamp, testName, PowerUnitID):
-          filename = outputFolder + str(timestamp)
-          filename = filename +'_BoardID%i_PowerUnit%s_LoadType%s_Config%s_%s_%s.txt' %(GetBoardID(), PowerUnitID, GetLoadType(), configNumber, testName, GetNameOfTester())
+          filename = outputFolder
+          filename = filename + 'PB-%04d_PU-%s_Load-%s_%s_%s.dat' %(GetBoardID(), PowerUnitID, GetLoadType(), testName, timestamp)
+          print filename
           return filename
 
         def GetPowerUnitID():
@@ -149,7 +155,9 @@ class Application(tk.Frame):
         def GetPowerBoardTestingStatus(boardId):
             pbtestingStatus = []
             for loadType in ["Low", "Nominal", "High"]:
-                pbtestingStatus.append(FileHandler.CheckFiles(boardId, loadType))
+                pbtestingStatus.append(FileHandler.CheckDataFiles(boardId, loadType))
+                if loadType == "High":
+                    pbtestingStatus[2] = pbtestingStatus[2] and FileHandler.CheckSummaryFile(boardId)
             return pbtestingStatus
 
         def SetPbtestingStatusFields(pbtestingStatus):
@@ -287,15 +295,35 @@ class Application(tk.Frame):
                 return False
             return True  
 
+        def ReadPowerVoltage(PowerUnitID):
+            tdk_mapping = {"Right": 0, "Left": 1}
+            tdk_id = tdk_mapping[PowerUnitID]
+            tdk_voltage = int(float(read_volt_TDK(tdk_id)) * 10)/10.
+            return tdk_voltage
+
+        def ReadPowerCurrent(PowerUnitID):
+            tdk_mapping = {"Right": 0, "Left": 1}
+            tdk_id = tdk_mapping[PowerUnitID]
+            tdk_current = float(read_curr_TDK(tdk_id))
+            return tdk_current
+
         def CheckBiasStatus():
             print "Checking -5V status (Voltage/Current)"
             bk_voltage = float(self.biasPs.GetVoltage())
             bk_current = float(self.biasPs.GetCurrent())
             bk_mode    = self.biasPs.GetMode()
-            if (bk_mode != "CV" or  bk_voltage != 5. or bk_current > 0.025 or bk_current < 0.015):
+            if (bk_mode != "CV" or  bk_voltage < 4.99 or bk_voltage > 5.01 or bk_current > 0.025 or bk_current < 0.015):
                 print "Error: Bias Status is wrong" 
                 return False
             return True
+
+        def ReadBiasVoltage():
+            bk_voltage = float(self.biasPs.GetVoltage())
+            return bk_voltage
+            
+        def ReadBiasCurrent():
+            bk_current = float(self.biasPs.GetCurrent())
+            return bk_current
 
         ## Test methods ###########################################
 
@@ -324,10 +352,11 @@ class Application(tk.Frame):
             if not tkMessageBox.askyesno("Polarized components status", "Smoke test Run for 2s per on Power Unit %s, is the board OK?" %(PowerUnitID)):
                 passed = False
 
-            TurnOffPower(PowerUnitID)
-            TurnOffBias()
              
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(0, passed)])
+
+            TurnOffPower(PowerUnitID)
+            TurnOffBias()
 
             print " "
             print " "
@@ -338,12 +367,14 @@ class Application(tk.Frame):
             return passed
 
         def PreliminaryTests():
+            if not CheckMainParameters():
+                return 
             passed = PreliminaryTest(PowerUnitID="Right") 
             passed = passed and PreliminaryTest(PowerUnitID="Left") 
             if passed:
             	PrelTest.config(bg='green')
 
-        def RunI2CTest(PowerUnitID=self.PowerUnitID):
+        def RunI2CTest(saveToFile = False, PowerUnitID = self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
@@ -359,6 +390,9 @@ class Application(tk.Frame):
             passed = I2CTest(PowerBoardIdIndexDict[PowerUnitID])
 
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(1, passed)])
+            
+            if saveToFile:
+                AppendI2CToSummaryFile(self.summaryFile, PowerUnitID)
              
             print " "
             print " "
@@ -368,7 +402,7 @@ class Application(tk.Frame):
 
             return passed
 
-        def RunLatchTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+        def RunLatchTest(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False, PowerUnitID = self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
@@ -380,17 +414,17 @@ class Application(tk.Frame):
             print "========================================================================================="
             print " "
             print " "
-
-            temporaryFile = "JUNK/LatchTest_PowerUnit%s.txt" %(PowerUnitID)
+           
+            # Power cycle both power units to get the right power on state for all the channels
+            temporaryFile = "JUNK/LatchTest_PowerUnit%s.dat" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
 
-            passed = LatchTest(temporaryFile, PowerBoardIdIndexDict[PowerUnitID])
+            passed = LatchTest(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID])
 
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(2, passed)])
 
             if saveToFile and passed:
-            	outputFile = buildOutputFilename(timestamp, "Latchtest", PowerUnitID)
-                subprocess.call(['/bin/bash', "-c", "cp %s %s" %(temporaryFile, outputFile)])
+                AppendLatchToSummaryFile(self.summaryFile, PowerUnitID)
 
             print " "
             print " "
@@ -400,7 +434,7 @@ class Application(tk.Frame):
 
             return passed
 
-        def RunBiasVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+        def RunBiasVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile = False, PowerUnitID = self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
@@ -413,20 +447,19 @@ class Application(tk.Frame):
             print " "
             print " "
 
-            temporaryFile = "JUNK/BiasVoltageScan_PowerUnit%s.txt" %(PowerUnitID)
+            temporaryFile = "JUNK/BiasScan_PowerUnit%s.dat" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
 
             BiasVoltageScan(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID])
 
-            bvsData = PbData.BiasVoltageScan(load.get()) 
+            bvsData = PbData.BiasVoltageScan(PowerUnitID, load.get(), self.summaryFile) 
             bvsData.readFile(temporaryFile)
-            passed = not bvsData.visualizeAndCheck()
+            passed = not bvsData.visualizeAndCheck(displayData = False, saveToFile = False)
 
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(3, passed)])
 
             if saveToFile and passed:
-            	outputFile = buildOutputFilename(timestamp, "BiasVoltageScan", PowerUnitID)
-                subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
+                bvsData.visualizeAndCheck(displayData = False, saveToFile = saveToFile)
 
             print " "
             print " "
@@ -436,7 +469,7 @@ class Application(tk.Frame):
 
             return passed
 
-        def RunPowerVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+        def RunPowerVoltageScan(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False, PowerUnitID = self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
@@ -449,20 +482,19 @@ class Application(tk.Frame):
             print " "
             print " "
 
-            temporaryFile = "JUNK/PowerVoltageScan_PowerUnit%s.txt" %(PowerUnitID)
+            temporaryFile = "JUNK/VoltageScan_PowerUnit%s.dat" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
 
             PowerVoltageScan(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID])
 
-            vsData = PbData.VoltageScan(load.get()) 
+            vsData = PbData.VoltageScan(PowerUnitID, load.get(), self.summaryFile) 
             vsData.readFile(temporaryFile)
-            passed = not vsData.visualizeAndCheck(True)
+            passed = not vsData.visualizeAndCheck(showFits = True, displayData = False, saveToFile = False)
 
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(4, passed)])
 
             if saveToFile and passed:
-            	outputFile = buildOutputFilename(timestamp, "VoltageScan", PowerUnitID)
-                subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
+                vsData.visualizeAndCheck(showFits = True, displayData = False, saveToFile = saveToFile)
 
             print " "
             print " "
@@ -472,7 +504,7 @@ class Application(tk.Frame):
 
             return passed
 
-        def RunThresholdScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+        def RunThresholdScan(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False, PowerUnitID = self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
@@ -485,22 +517,21 @@ class Application(tk.Frame):
             print " "
             print " "
 
-            temporaryFile = "JUNK/ThresholdScan_PowerUnit%s.txt" %(PowerUnitID)
+            temporaryFile = "JUNK/ThresholdScan_PowerUnit%s.dat" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
 
             passed = True
 
             ThresholdScan(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID])
 
-            tsData = PbData.ThresholdScan(load.get()) 
+            tsData = PbData.ThresholdScan(PowerUnitID, load.get(), self.summaryFile) 
             tsData.readFile(temporaryFile)
-            passed = not tsData.visualizeAndCheck()
+            passed = not tsData.visualizeAndCheck(showFits = True, displayData = False, saveToFile = False)
 
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(5, passed)])
 
             if saveToFile and passed:
-            	outputFile = buildOutputFilename(timestamp, "ThresholdScan", PowerUnitID)
-                subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
+                tsData.visualizeAndCheck(showFits = True, displayData = False, saveToFile = saveToFile)
 
 	    print " "
             print " "
@@ -510,7 +541,7 @@ class Application(tk.Frame):
 
             return passed
 
-        def RunOverTprotectionScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID):
+        def RunOverTprotectionScan(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False, PowerUnitID = self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
@@ -518,32 +549,80 @@ class Application(tk.Frame):
 
             os.system('clear')
             print "========================================================================================="
-            print "         Starting over-temperature protection test on Power Unit %s ........." %(PowerUnitID)
+            print "                   Starting Temperature test on Power Unit %s ........." %(PowerUnitID)
             print "========================================================================================="
             print " "
             print " "
 
-            temporaryFile = "JUNK/TemperatureScan_PowerUnit%s.txt" %(PowerUnitID)
+            temporaryFile = "JUNK/TemperatureTest_PowerUnit%s.dat" %(PowerUnitID)
             if os.path.exists(temporaryFile): os.remove(temporaryFile)
 
-            passed = TemperatureTest(temporaryFile, PowerBoardIdIndexDict[PowerUnitID], Vset)
+            passed = TemperatureTest(temporaryFile, self.summaryFile, PowerBoardIdIndexDict[PowerUnitID], saveToFile = saveToFile)
+
             PrintSummaryInGui(PowerUnitID, [GetTestMessage(6, passed)])
-            if saveToFile and passed:
-            	outputFile = buildOutputFilename(timestamp, "TemperatureScan", PowerUnitID)
-                subprocess.call(['/bin/bash', '-c', "cp %s %s" %(temporaryFile, outputFile)])
 
             print " "
             print " "
             print "========================================================================================="
-            print "                      Over-temperature ended. Test passed? ", passed
+            print "                      Temperature test ended. Test passed? ", passed
             print "========================================================================================="
 
             return passed
 
+        def RemoveSummaryFileForSpecificLoad(load):
+            listOfFilesInFolder = os.listdir("./JUNK/") 
+            listOfSummaryFiles = [x for x in listOfFilesInFolder if x.split("_")[0] == "summary"]
+            listOfSummaryFilesForSpecificLoad = [x for x in listOfSummaryFiles if x.split("_")[1] == load]
+            for summaryFile in listOfSummaryFilesForSpecificLoad:
+                os.remove("./JUNK/" + summaryFile)
 
-        def RunAllScans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile=False):
+        def CreateSummaryFileForSpecificLoad(load):
+            RemoveSummaryFileForSpecificLoad(load)
+            return "./JUNK/summary_" + load + ".txt"
+
+        def CreateSummaryFile():
+            listOfFilesInFolder = os.listdir("./JUNK/") 
+            listOfSummaryFiles = [x for x in listOfFilesInFolder if x.split("_")[0] == "summary"]
+            if len(listOfSummaryFiles) != 3:
+                print "Number of summary files is wrong"
+	    summaryPartial = ['./JUNK/summary_Low.txt', './JUNK/summary_Nominal.txt', './JUNK/summary_High.txt']
+            for load in summaryPartial:
+                if "summary_" + load + ".txt" not in listOfSummaryFiles:
+                    print "Summary file does not exist" 
+
+            summary = "./RESULTS/PB-" + str(self.BoardID).zfill(4) + "_summary_" + str(time.strftime("%Y%m%dT%H%M%S")) + ".txt"
+
+	    with open(summary, 'w') as outfile:
+	        for fname in summaryPartial:
+		    with open(fname) as infile:
+		        for line in infile:
+			    outfile.write(line)
+
+        def DeleteAllTemporaryFiles(doit = False):
+                if not doit:
+                    return        
+                testList = ["LatchTest", "TemperatureTest", "BiasScan", "VoltageScan", "ThresholdScan"]
+                puList = ["Right", "Left"]
+                # Delete temporary datafiles
+                for test in testList:
+ 		    for powerUnit in puList:
+                        try:
+                            temporaryFile = "./JUNK/" + test + "_PowerUnit" + powerUnit + ".dat"
+			    os.remove(temporaryFile)
+                        except:
+                            pass
+                # Delete temporary (partial, for the selected load) summary file    
+                temporaryFile = "./JUNK/summary_" + load.get() + ".txt"
+                print temporaryFile
+                try:
+                    os.remove(temporaryFile) 
+                except:
+                    pass
+
+        def RunAllScans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False):
             ResetReportFieldTitle('Both')
             CleanTestReportEntry('Both')
+            DeleteAllTemporaryFiles(doit = True)
             try:
                 if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                     return
@@ -553,39 +632,54 @@ class Application(tk.Frame):
                 testResults = {"Right": 0, "Left": 0}
                 PowerUnitIDs = ['Right', 'Left']
                 # Running characterization tests
+                PowerCycleBias()
+                PowerCyclePower("Both") 
                 if load.get() == 'Low':
 		    tkMessageBox.showwarning( "Info", "Load \"low\" was selected. The GUI will run some preliminary tests on both power units before the scans.", icon="info")
+                    self.summaryFile = CreateSummaryFileForSpecificLoad(load.get())
+                    for PowerUnitID in PowerUnitIDs:
+                        AppendPreliminaryToSummaryFile(self.summaryFile, PowerUnitID, GetNameOfTester(), ReadPowerVoltage(PowerUnitID), ReadPowerCurrent(PowerUnitID), ReadBiasVoltage(), ReadBiasCurrent())
                     # Running preliminary tests
                     for PowerUnitID in PowerUnitIDs:
                         PowerCycleBias()
                         PowerCyclePower(PowerUnitID)
-		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunOverTprotectionScan(timestamp, saveToFile, PowerUnitID)) << 5)
+		        #testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunOverTprotectionScan(timestamp, saveToFile, PowerUnitID)) << 6)
                         tkMessageBox.showwarning( "Info", "Power Unit %s will be power cycled." %(PowerUnitID), icon="info")
                     for PowerUnitID in PowerUnitIDs:
                         PowerCycleBias()
                         PowerCyclePower(PowerUnitID)
-		        testResults[PowerUnitID] = testResults[PowerUnitID] | RunI2CTest(timestamp, PowerUnitID)
+		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunI2CTest(saveToFile, PowerUnitID)) << 1)
                     for PowerUnitID in PowerUnitIDs:
                         PowerCycleBias()
                         PowerCyclePower(PowerUnitID)
-		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchTest(timestamp, saveToFile, PowerUnitID)) << 1)
+		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchTest(timestamp, saveToFile, PowerUnitID)) << 2)
+                else:
+                    self.summary = CreateSummaryFileForSpecificLoad(load.get())
                 for PowerUnitID in PowerUnitIDs:
-	            testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 2)
-		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 3)
-		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunThresholdScan(timestamp, saveToFile, PowerUnitID))    << 4)
+	            testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 3)
+                for PowerUnitID in PowerUnitIDs:
+		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 4)
+                for PowerUnitID in PowerUnitIDs:
+		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunThresholdScan(timestamp, saveToFile, PowerUnitID))    << 5)
                 for PowerUnitID in PowerUnitIDs:
                     ResetReportFieldTitle(PowerUnitID)
                     CleanTestReportEntry(PowerUnitID)
-                    messageBuffer, passed[PowerUnitID] = SummaryOfResults(127, testResults[PowerUnitID])
+                    messageBuffer = []
+                    if (load.get() == "Low"):
+                        messageBuffer, passed[PowerUnitID] = SummaryOfResults(126, testResults[PowerUnitID])
+                    else:
+                        messageBuffer, passed[PowerUnitID] = SummaryOfResults(56, testResults[PowerUnitID])
 	            PrintSummaryInGui(PowerUnitID, messageBuffer)
                     UpdateReportFieldTitle(PowerUnitID, passed[PowerUnitID])
+                if passed["Right"] and passed["Left"]:
+                    WriteDataFiles()
+                    if load.get() == "High":
+                        CreateSummaryFile()
 	        pbtestingStatus = GetPowerBoardTestingStatus(GetBoardID())
                 SetPbtestingStatusFields(pbtestingStatus)
                 # Tests are finished, resetting parameters
 		tkMessageBox.showwarning( "Info", "All tests finished.", icon="info")
                 RunAllTestsButton.config(state="normal")
-                #name.set('')
-                #ddownNames['bg'] = 'salmon'
                 TurnOffPower("Both")
                 TurnOffBias()
                 if pbtestingStatus == [1, 1, 1]:
@@ -602,7 +696,7 @@ class Application(tk.Frame):
             fgcolor       = ""
             if passed:
                 qualification = "good"
-                fgcolor       = "green"
+                fgcolor       = "blue"
             elif not passed:
                 qualification = "bad"
                 fgcolor       = "red"
@@ -645,8 +739,8 @@ class Application(tk.Frame):
             return True
 
         def CheckRDOConfigAndCommDone():
-            if (LdFirmware['bg'] != 'green' or CheckComm['bg'] != 'green'):
-                tkMessageBox.showinfo("RDO unconfigured/unckecked", "Please check that:\n\n1) The firmware is loaded into the FPGA\n2) There is communication with the power board")
+            if (PrelTest['bg'] != 'green' or LdFirmware['bg'] != 'green' or CheckComm['bg'] != 'green'):
+                tkMessageBox.showinfo("RDO unconfigured/unckecked", "Please check that:\n\n1) The preliminary test is run\n2) The firmware is loaded into the FPGA\n3) There is communication with the power board")
                 return False
             return True
 
@@ -675,17 +769,18 @@ class Application(tk.Frame):
                 reportsLeft.config(state='disabled')
 
         # testMap: bitmap of the implemented tests (integer):
-        # 0b000001: I2C test
-        # 0b000010: Latch test
-        # 0b000100: Bias Voltage scan
-        # 0b001000: Power Voltage scan
-        # 0b010000: Threshold scan
-        # 0b100000: Over-temperature test
+        # 0b0000001: Preliminary Test
+        # 0b0000010: I2C test
+        # 0b0000100: Latch test
+        # 0b0001000: Bias Voltage scan
+        # 0b0010000: Power Voltage scan
+        # 0b0100000: Threshold scan
+        # 0b1000000: Over-temperature test
         # testResults: bitmap if the results of the tests in line with what described above (0: failed, 1: passed)
 	def SummaryOfResults(testMap, testResults):
             passed = True
             messageBuffer = []
-	    for i in range(0, 6):
+	    for i in range(0, 7):
                 if ((testMap >> i) & 0x1):
                     if not ((testResults >> i) & 0x1):
                         messageBuffer.append(GetTestMessage(i, False))
@@ -695,7 +790,25 @@ class Application(tk.Frame):
 
             return messageBuffer, passed
 
+
+        def WriteDataFiles():
+            if load.get()     == "Low":
+                testList = ["LatchTest", "TemperatureTest"]
+                puList   = ["Right", "Left"]
+                for test in testList :
+                    for powerUnit in puList:
+                        temporaryFile = "./JUNK/" + test + "_PowerUnit" + powerUnit + ".dat"
+                        outputFile = buildOutputFilename(timestamp, test, powerUnit)
+                        subprocess.call(['/bin/bash', "-c", "cp %s %s" %(temporaryFile, outputFile)])
+            testList = ["BiasScan", "VoltageScan", "ThresholdScan"]
+	    for test in testList :
+	        for powerUnit in puList:
+		    temporaryFile = "./JUNK/" + test + "_PowerUnit" + powerUnit + ".dat"
+		    outputFile = buildOutputFilename(timestamp, test, powerUnit)
+		    subprocess.call(['/bin/bash', "-c", "cp %s %s" %(temporaryFile, outputFile)])
+
         # testNumber:
+        # 0: Preliminary test
         # 1: I2C test
         # 2: Latch test
         # 3: Bias Voltage scan
@@ -730,9 +843,9 @@ class Application(tk.Frame):
         ######## TITLE BAR  ##########################################################################
         self.titlefr = tk.Frame(self, bg = 'grey', relief = 'ridge', borderwidth = 2)
         self.titlefr.grid(row = 0, column = 0, columnspan = 10, sticky = 'nsew')
-        titleLabel = tk.Label(self.titlefr, width = 45, text = "ALICE ITS Production Power Board qualification", anchor = 'center', fg="white", bg='midnight blue')
+        titleLabel = tk.Label(self.titlefr, width = 45, text = "ALICE ITS Production Power Board Qualification GUI", anchor = 'center', fg="white", bg='midnight blue')
         titleLabel.grid(row = 0, column = 0, sticky = 'nsew')
-        titleLabel.configure(font=("Helvetica", 18))
+        titleLabel.configure(font=("Helvetica", 17))
         self.canvasfr = tk.Frame(self.titlefr, bg = 'green')
         self.canvasfr.grid(row = 0, column = 1, sticky = 'nsew')
         #canvas = tk.Canvas(self.canvasfr, width = 85, highlightthickness = 0, height = 63, bg = 'green')
@@ -803,12 +916,14 @@ class Application(tk.Frame):
             if not tkMessageBox.askyesno("Delete all board files", "100% sure?"): 
                 return 
             FileHandler.DeleteBoardFiles(GetBoardID())
+            UnlockBoardID()
         clearResultsButton = tk.Button(self, text="Clear previous results", command = DeleteAllBoardFiles, state = "disabled")
         clearResultsButton.grid(row = 7, column = 1, columnspan = 2, sticky = 'nsew')
   
         ################################################################################################
         ######## PICK TYPE OF LOAD #####################################################################
         ################################################################################################
+
         def ddownLoadsColorChange(event):
             if load.get():
                 ddownLoads.config(bg = 'green')
@@ -821,7 +936,6 @@ class Application(tk.Frame):
         ddownLoads.grid(row = 9, column = 1, columnspan = 2)
         def GetLoadType():
 	    return load.get()
-
 
         ################################################################################################
         ######## SELECT VOLTAGE SCAN PLOTTING OPTION ###################################################
@@ -881,7 +995,7 @@ class Application(tk.Frame):
         ##########################################################################################
 
         ### I2C ###########################################################
-        I2CButton = tk.Button(self, text="I2C test", command = lambda: RunI2CTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
+        I2CButton = tk.Button(self, text="I2C test", command = lambda: RunI2CTest(PowerUnitID=self.PowerUnitID))
         I2CButton.grid(row = 7, column = 5, sticky = 'nsew')
         ###################################################################
 
@@ -997,5 +1111,7 @@ class Application(tk.Frame):
 ##Actual MAIN FUNCTION
 root = tk.Tk()
 app = Application(master=root)
-app.master.title("Production Power Board Testing GUI")
+app.master.title("Production Power Board Qualification GUI")
 app.mainloop()
+
+

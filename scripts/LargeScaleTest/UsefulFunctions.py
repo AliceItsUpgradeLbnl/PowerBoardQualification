@@ -6,7 +6,7 @@ import time
 from time import strftime, sleep
 import datetime
 import shutil
-from definitions import *
+from Definitions import *
 
 # I2C links for the various power board devices
 BridgeTempLink      = "main"
@@ -301,7 +301,7 @@ def UnlatchPowerAllSpecial(PowerUnitID):
     WriteToDevice(I2CLink(PowerUnitID, LinkType), IOExpanderPowerAddress[1], 0xFF)
 
 def UnlatchBias(channel,PowerUnitID):
-    print 'Unlatching bias channel #%d' %(channel)
+    #print 'Unlatching bias channel #%d' %(channel)
     if (channel > 8):
         print 'Channel #%d for bias does not exist' % (channel)
     LinkType = IOExpanderBiasLink

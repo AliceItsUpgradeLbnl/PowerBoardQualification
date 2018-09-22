@@ -1,13 +1,15 @@
 from UsefulFunctions import*
 import math
 
-def LatchTest(output, PowerUnitID):
+import ReadConfig
+
+def LatchTest(output, load, PowerUnitID):
     # Config params
-    config = ReadConfig.GetMostRecentConfig('LargeScaleTest/ScanConfig/')
+    config = ReadConfig.GetMostRecentConfig('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationConfig/')
     minrc = config["LatchTest_minrc"]		
     maxrc = config["LatchTest_maxrc"]		
 
-    header = "CH# Before Enabling / After Enabling / After Latching"
+    header = 'CH#   After PB powering  /  After Enabling  /  After Disabling  /  After Power not latched  /  After Power Latched  /  All checks passed?'
     with open(output,"ab") as f:
 	f.write(str(header) + "\n")
 
@@ -25,13 +27,12 @@ def LatchTest(output, PowerUnitID):
     passed = True
     print " "
     print 'Printing results:'
-    print 'CH#   Before Enabling  /  After Power on Latched  /  After Enabling  /  After Disabling  /  After Latching  /  Check OK?'
+    print 'CH#   After PB powering  /  After Enabling  /  After Disabling  /  After Power not latched  /  After Power Latched  /  All checks passed?'
+    # Recording states of channels before enabling them
+    poweronStates   = GetPowerLatchStatus(PowerUnitID)
+    poweronVoltages = ReadPowerChannelVoltages(PowerUnitID)
     # Loop over channels
     for channel in range(16):
-        # Recording states of channels before enabling them
-        beforeEnablingStates   = GetPowerLatchStatus(PowerUnitID)
-        beforeEnablingVoltages = ReadPowerChannelVoltages(PowerUnitID)
-
         # Setting threshold low, enabling channel and setting threshold high after 10ms (short time)
         if (channel % 2):
             SetThreshold(channel, 0x368, PowerUnitID) # Lowering digital thresholds so the channels will latch at poweron (however threshold will be raised so it won't happen)
@@ -84,36 +85,24 @@ def LatchTest(output, PowerUnitID):
         afterEnablingStates   = GetPowerLatchStatus(PowerUnitID) # Read status
 	time.sleep(0.12) # Conversion time of the ADCs
         afterEnablingVoltages = ReadPowerChannelVoltages(PowerUnitID)
-        print afterEnablingVoltages
         # Disabling channels and checking states and voltages
         DisablePowerAll(PowerUnitID)
 	time.sleep(0.001)  # Turn off time of the regulators
         afterDisablingStates = GetPowerLatchStatus(PowerUnitID) # Read status
 	time.sleep(0.12) # Conversion time of the ADCs
         afterDisablingVoltages = ReadPowerChannelVoltages(PowerUnitID)
-        # Lowering thresholds channels and checking states and voltages
-        UnlatchPower(channel, PowerUnitID) # Enable channel 
-        time.sleep(0.001) # Turn on time of regulators
-        SetThreshold(channel, 0, PowerUnitID) # Set threshold of channel to zero to latch it
-	time.sleep(0.003) # Setting time of threshold
-        afterLatchingStates = GetPowerLatchStatus(PowerUnitID) # Read status
-	time.sleep(0.12) # Conversion time of the ADCs
-        afterLatchingVoltages = ReadPowerChannelVoltages(PowerUnitID)
-        print afterPowerNotLatchedStates
-        print afterPowerLatchedStates
-        if (beforeEnablingStates == 0 and afterPowerNotLatchedStates == (1 << channel) and afterPowerLatchedStates == 0 \
-            and afterEnablingStates == (1 << channel) and afterDisablingStates == 0 and afterLatchingStates == 0 \
-            and not any([(voltage > 0.001) for voltage in beforeEnablingVoltages]) \
+        if (poweronStates == 0 and afterPowerNotLatchedStates == (1 << channel) and afterPowerLatchedStates == 0 \
+            and afterEnablingStates == (1 << channel) and afterDisablingStates == 0 \
+            and not any([(voltage > 0.001) for voltage in poweronVoltages]) \
             and (afterPowerNotLatchedVoltages[channel] > 2.0) \
             and not any([(afterPowerNotLatchedVoltages[i] > 0.001) for i in range(len(afterPowerNotLatchedVoltages)) if i != channel]) \
             and not any([(voltage > 0.001) for voltage in afterPowerLatchedVoltages]) \
             and (afterEnablingVoltages[channel] > 2.0) \
             and not any([(afterEnablingVoltages[i] > 0.001) for i in range(len(afterEnablingVoltages)) if i != channel]) \
-            and not any([(voltage > 0.001) for voltage in afterDisablingVoltages]) \
-            and not any([(voltage > 0.001) for voltage in afterLatchingVoltages])):
-            line = "%2d %10d %20d %20d %20d %18d %15s" %(channel, beforeEnablingStates, afterPowerLatchedStates, afterEnablingStates, afterDisablingStates, afterLatchingStates, 'YES')
+            and not any([(voltage > 0.001) for voltage in afterDisablingVoltages])):
+            line = "%2d %10d %23d %18d %23d %24d %21s" %(channel, poweronStates, afterEnablingStates, afterDisablingStates, afterPowerNotLatchedStates, afterPowerLatchedStates, 'YES')
 	else:
-            line = "%2d %10d %20d %20d %20d %18d %15s" %(channel, beforeEnablingStates, afterPowerLatchedStates, afterEnablingStates, afterDisablingStates, afterLatchingStates, 'NO')
+            line = "%2d %10d %23d %18d %23d %24d %21s" %(channel, poweronStates, afterEnablingStates, afterDisablingStates, afterPowerNotLatchedStates, afterPowerLatchedStates, 'NO')
             passed = False
 
 	print line
@@ -126,38 +115,71 @@ def LatchTest(output, PowerUnitID):
 
     # Testing bias section - Channels 0-2
     ConfigureBiasADC(PowerUnitID) # this is necessary to be able to read ADCs
+    print " "
     SetBiasVoltage(0x80, PowerUnitID)
+    time.sleep(0.5)
+    poweronStates = 0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)
+    poweronCurrent, poweronVoltage = ReadBiasADC(PowerUnitID) 
+    
+    print 'Printing results:'
+    print 'CH#   After PB powering  /  After Enabling  /  After Disabling  /                                                      All checks passed?'
+    #DisableBiasAll(PowerUnitID)
     for biasOutput in range(3):
-        DisableBiasAll(PowerUnitID)
-        time.sleep(0.1)  # Enable time
-        time.sleep(0.12) # ADC conversion time
         idleCurrent, voltage = ReadBiasADC(PowerUnitID) 
-        print idleCurrent
         UnlatchBias(biasOutput, PowerUnitID)
         time.sleep(0.1)  # Enable time
-        time.sleep(0.12) # ADC conversion time
+        afterEnablingStates = 0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)
+        time.sleep(0.25) # ADC conversion time
         current, voltage = ReadBiasADC(PowerUnitID) 
-        print current, voltage
-        if (abs(abs(voltage)/(current - idleCurrent) - 1000.)/1000.) > 0.20:
-            print "Measured load does not match actual load (expected 1000 Ohm)"
+        DisableBiasAll(PowerUnitID)
+        time.sleep(0.1)  # Enable time
+        afterDisablingStates = 0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)
+        time.sleep(0.25) # ADC conversion time
+        finalCurrent, finalVoltage = ReadBiasADC(PowerUnitID) 
+        if not (poweronStates == 0 and afterEnablingStates == (1 << biasOutput) and afterDisablingStates == 0 and \
+           abs(finalCurrent - idleCurrent) < 0.001 and idleCurrent < 0.015 and voltage < -4.):
+            line = "%2s %10d %23d %18d %70s" %("B" + str(biasOutput), poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
+        else:
+            line = "%2s %10d %23d %18d %70s" %("B" + str(biasOutput), poweronStates, afterEnablingStates, afterDisablingStates, 'YES')
 
-    # Testing bias section - Channel 3
-    DisableBiasAll(PowerUnitID)
-    time.sleep(0.1)  # Enable time
-    time.sleep(0.12) # ADC conversion time
+	print line
+        with open(output,"ab") as f:
+            f.write(str(line) + "\n")
+
+        #if (abs(abs(voltage)/(current - idleCurrent) - 1000.)/1000.) > 0.20:
+        #    #print "Measured load does not match actual load (expected 1k Ohm)"
+        #    passed = False
+
     idleCurrent, voltage = ReadBiasADC(PowerUnitID) 
-    print idleCurrent
     UnlatchBias(3, PowerUnitID)
     time.sleep(0.1)  # Enable time
-    time.sleep(0.12) # ADC conversion time
+    afterEnablingStates = 0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)
+    time.sleep(0.25) # ADC conversion time
     current, voltage = ReadBiasADC(PowerUnitID) 
-    print current, voltage
-    if current > 0.070 or current < 0.060:
-        print "Regulator current limit outside boundaries"
-    if voltage > -2.0 or voltage < -3.0:
-        print "Regulator current limit outside boundaries"
-        passed = False
+    DisableBiasAll(PowerUnitID)
+    time.sleep(0.1)  # Enable time
+    afterDisablingStates = 0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)
+    time.sleep(0.25) # ADC conversion time
+    finalCurrent, finalVoltage = ReadBiasADC(PowerUnitID) 
+    if load == "Low":
+        if not (poweronStates == 0 and afterEnablingStates == (1 << 3) and afterDisablingStates == 0 and \
+                (current < 0.070 and current > 0.060) and (voltage < -2.0 and voltage > -3.0) and abs(finalCurrent - idleCurrent) < 0.001 and idleCurrent < 0.015):
+            line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
+            passed = False
+        else:
+            line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'YES')
+    else:
+        if not (poweronStates == 0 and afterEnablingStates == (1 << 3) and afterDisablingStates == 0 and \
+            abs(finalCurrent - idleCurrent) < 0.001 and idleCurrent < 0.015 and voltage < -4.):
+            line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
+            passed = False
+        else:
+            line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'YES')
+
+    print line
+    with open(output,"ab") as f:
+        f.write(str(line) + "\n")
 
     CloseFtdi() # Ends communication with RDO board
 

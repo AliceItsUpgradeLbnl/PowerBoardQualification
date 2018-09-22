@@ -9,10 +9,11 @@
   "PowerScan_Vstep": 10,
   "PowerScan_start": 250,
   "PowerScan_end": -1,
-  "PowerScan_maxfit": {"Low": 250, "Nominal": 250, "High": 190},
+  "PowerScan_maxfit": {"Low": 250, "Nominal": 240, "High": 190},
   "PowerScan_nsamples": 10,
   "ThresholdScan_Thstep": 1,
   "ThresholdScan_start": 0,
   "ThresholdScan_end": 256,
-  "ThresholdScan_Vpoints": [100, 130, 160, 190, 220, 250]
+  "ThresholdScan_Vpoints": [0, 50, 100, 150, 200, 250],
+  "ThresholdScan_maxfit": {"Low": 250, "Nominal": 240, "High": 190}
 }
