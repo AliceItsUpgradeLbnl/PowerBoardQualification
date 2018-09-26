@@ -22,8 +22,8 @@ from VoltageScan import *
 from ThresholdScan import *
 from TemperatureTest import* 
 
-from DataPlotter import PlotPowerVoltageScanData
-from DataPlotter import PlotBiasVoltageScanData
+from DataPlotter import PlotVoltageScanData
+from DataPlotter import PlotBiasScanData
 from DataPlotter import PlotThresholdScanData
 
 from SummaryMethods import *
@@ -40,6 +40,8 @@ import ReadConfig
 import ReadParams
 
 #params = ReadParams.GetMostRecentParams('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationParams/')
+
+tsMode = 'disabled' # Throubleshooting mode
 
 class StopTest(Exception):
     pass
@@ -113,7 +115,6 @@ class Application(tk.Frame):
         def buildOutputFilename(timestamp, testName, PowerUnitID):
           filename = outputFolder
           filename = filename + 'PB-%04d_PU-%s_Load-%s_%s_%s.dat' %(GetBoardID(), PowerUnitID, GetLoadType(), testName, timestamp)
-          print filename
           return filename
 
         def GetPowerUnitID():
@@ -148,6 +149,7 @@ class Application(tk.Frame):
             lockButton.config(state='normal')
             unlockButton.config(state='disabled')
             clearResultsButton.config(state='disabled')
+            RunPrescansButton.config(bg = None)
             SetPbtestingStatusFields([0,0,0])
             SetPreliminaryTestStatus([0,0,0])
             self.BoardID = None
@@ -452,7 +454,7 @@ class Application(tk.Frame):
 
             BiasVoltageScan(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID])
 
-            bvsData = PbData.BiasVoltageScan(PowerUnitID, load.get(), self.summaryFile) 
+            bvsData = PbData.BiasScan(PowerUnitID, load.get(), self.summaryFile) 
             bvsData.readFile(temporaryFile)
             passed = not bvsData.visualizeAndCheck(displayData = False, saveToFile = False)
 
@@ -613,83 +615,102 @@ class Application(tk.Frame):
                             pass
                 # Delete temporary (partial, for the selected load) summary file    
                 temporaryFile = "./JUNK/summary_" + load.get() + ".txt"
-                print temporaryFile
                 try:
                     os.remove(temporaryFile) 
                 except:
                     pass
 
+        def RunPrescans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False):
+            ResetReportFieldTitle('Both')
+            CleanTestReportEntry('Both')
+            DeleteAllTemporaryFiles(doit = True)
+            if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
+                return
+            self.summaryFile = CreateSummaryFileForSpecificLoad(load.get()) # Load is always Low in this function
+	    PrescansButton.config(state = 'disabled')
+	    passed      = {"Right": False, "Left": False}
+	    testResults = {"Right": 0, "Left": 0}
+	    PowerUnitIDs = ['Right', 'Left']
+	    PowerCycleBias()
+	    PowerCyclePower("Both") 
+            for PowerUnitID in PowerUnitIDs:
+                AppendPreliminaryToSummaryFile(self.summaryFile, PowerUnitID, GetNameOfTester(), ReadPowerVoltage(PowerUnitID), ReadPowerCurrent(PowerUnitID), ReadBiasVoltage(), ReadBiasCurrent())
+	    for PowerUnitID in PowerUnitIDs:
+		PowerCycleBias()
+		PowerCyclePower(PowerUnitID)
+		testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunOverTprotectionScan(timestamp, saveToFile, PowerUnitID)) << 6)
+		tkMessageBox.showwarning( "Info", "Power Unit %s will be power cycled." %(PowerUnitID), icon="info")
+	    for PowerUnitID in PowerUnitIDs:
+		PowerCycleBias()
+		PowerCyclePower(PowerUnitID)
+		testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunI2CTest(saveToFile, PowerUnitID)) << 1)
+	    for PowerUnitID in PowerUnitIDs:
+		PowerCycleBias()
+		PowerCyclePower(PowerUnitID)
+		testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchTest(timestamp, saveToFile, PowerUnitID)) << 2)
+            for PowerUnitID in PowerUnitIDs:
+       	        ResetReportFieldTitle(PowerUnitID)
+	        CleanTestReportEntry(PowerUnitID)
+	        messageBuffer = []
+		messageBuffer, passed[PowerUnitID] = SummaryOfResults(126, testResults[PowerUnitID])
+	        PrintSummaryInGui(PowerUnitID, messageBuffer)
+	        UpdateReportFieldTitle(PowerUnitID, passed[PowerUnitID])
+	    if passed["Right"] and passed["Left"]:
+                RunPrescansButton['bg'] = 'green'
+	    RunAllTestsButton.config(state="normal")
+	    TurnOffPower("Both")
+	    TurnOffBias()
+            return
+
         def RunAllScans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False):
             ResetReportFieldTitle('Both')
             CleanTestReportEntry('Both')
             DeleteAllTemporaryFiles(doit = True)
-            try:
-                if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
-                    return
-                root.update()
-                RunAllTestsButton.config(state = 'disabled')
-                passed      = {"Right": False, "Left": False}
-                testResults = {"Right": 0, "Left": 0}
-                PowerUnitIDs = ['Right', 'Left']
-                # Running characterization tests
-                PowerCycleBias()
-                PowerCyclePower("Both") 
-                if load.get() == 'Low':
-		    tkMessageBox.showwarning( "Info", "Load \"low\" was selected. The GUI will run some preliminary tests on both power units before the scans.", icon="info")
-                    self.summaryFile = CreateSummaryFileForSpecificLoad(load.get())
-                    for PowerUnitID in PowerUnitIDs:
-                        AppendPreliminaryToSummaryFile(self.summaryFile, PowerUnitID, GetNameOfTester(), ReadPowerVoltage(PowerUnitID), ReadPowerCurrent(PowerUnitID), ReadBiasVoltage(), ReadBiasCurrent())
-                    # Running preliminary tests
-                    for PowerUnitID in PowerUnitIDs:
-                        PowerCycleBias()
-                        PowerCyclePower(PowerUnitID)
-		        #testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunOverTprotectionScan(timestamp, saveToFile, PowerUnitID)) << 6)
-                        tkMessageBox.showwarning( "Info", "Power Unit %s will be power cycled." %(PowerUnitID), icon="info")
-                    for PowerUnitID in PowerUnitIDs:
-                        PowerCycleBias()
-                        PowerCyclePower(PowerUnitID)
-		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunI2CTest(saveToFile, PowerUnitID)) << 1)
-                    for PowerUnitID in PowerUnitIDs:
-                        PowerCycleBias()
-                        PowerCyclePower(PowerUnitID)
-		        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchTest(timestamp, saveToFile, PowerUnitID)) << 2)
-                else:
-                    self.summary = CreateSummaryFileForSpecificLoad(load.get())
-                for PowerUnitID in PowerUnitIDs:
-	            testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 3)
-                for PowerUnitID in PowerUnitIDs:
-		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 4)
-                for PowerUnitID in PowerUnitIDs:
-		    testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunThresholdScan(timestamp, saveToFile, PowerUnitID))    << 5)
-                for PowerUnitID in PowerUnitIDs:
-                    ResetReportFieldTitle(PowerUnitID)
-                    CleanTestReportEntry(PowerUnitID)
-                    messageBuffer = []
-                    if (load.get() == "Low"):
-                        messageBuffer, passed[PowerUnitID] = SummaryOfResults(126, testResults[PowerUnitID])
-                    else:
-                        messageBuffer, passed[PowerUnitID] = SummaryOfResults(56, testResults[PowerUnitID])
-	            PrintSummaryInGui(PowerUnitID, messageBuffer)
-                    UpdateReportFieldTitle(PowerUnitID, passed[PowerUnitID])
-                if passed["Right"] and passed["Left"]:
-                    WriteDataFiles()
-                    if load.get() == "High":
-                        CreateSummaryFile()
-	        pbtestingStatus = GetPowerBoardTestingStatus(GetBoardID())
-                SetPbtestingStatusFields(pbtestingStatus)
-                # Tests are finished, resetting parameters
-		tkMessageBox.showwarning( "Info", "All tests finished.", icon="info")
-                RunAllTestsButton.config(state="normal")
-                TurnOffPower("Both")
-                TurnOffBias()
-                if pbtestingStatus == [1, 1, 1]:
-                    UnlockBoardID()
-                    load.set('')
-                    ddownLoads['bg'] = 'salmon'
-                    CheckComm['bg'] = 'salmon'
-                return passed
-            except StopTest:
-                StopAllScans()
+	    if not CheckMainParameters() or not CheckRDOConfigAndCommDone() or not (CheckPrescansDone() and load.get() == "Low"):
+	        return
+	    root.update()
+	    RunAllTestsButton.config(state = 'disabled')
+	    passed      = {"Right": False, "Left": False}
+	    testResults = {"Right": 0, "Left": 0}
+	    PowerUnitIDs = ['Right', 'Left']
+	    # Running characterization tests
+	    PowerCycleBias()
+	    PowerCyclePower("Both") 
+	    if load.Get() != "Low":
+	        self.summaryFile = CreateSummaryFileForSpecificLoad(load.get())
+	    for PowerUnitID in PowerUnitIDs:
+	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 3)
+	    for PowerUnitID in PowerUnitIDs:
+	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 4)
+	    for PowerUnitID in PowerUnitIDs:
+	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunThresholdScan(timestamp, saveToFile, PowerUnitID))    << 5)
+	    for PowerUnitID in PowerUnitIDs:
+	        ResetReportFieldTitle(PowerUnitID)
+	        CleanTestReportEntry(PowerUnitID)
+	        messageBuffer = []
+	        if (load.get() == "Low"):
+		    messageBuffer, passed[PowerUnitID] = SummaryOfResults(126, testResults[PowerUnitID])
+	        else:
+		    messageBuffer, passed[PowerUnitID] = SummaryOfResults(56, testResults[PowerUnitID])
+	        PrintSummaryInGui(PowerUnitID, messageBuffer)
+	        UpdateReportFieldTitle(PowerUnitID, passed[PowerUnitID])
+	    if passed["Right"] and passed["Left"]:
+	        WriteDataFiles()
+	        if load.get() == "High":
+		    CreateSummaryFile()
+	    pbtestingStatus = GetPowerBoardTestingStatus(GetBoardID())
+	    SetPbtestingStatusFields(pbtestingStatus)
+	    # Tests are finished, resetting parameters
+	    tkMessageBox.showwarning( "Info", "All tests finished.", icon="info")
+	    RunAllTestsButton.config(state="normal")
+	    TurnOffPower("Both")
+	    TurnOffBias()
+	    if pbtestingStatus == [1, 1, 1]:
+	        UnlockBoardID()
+	        load.set('')
+	        ddownLoads['bg'] = 'salmon'
+	        CheckComm['bg'] = 'salmon'
+	    return passed
 
         def UpdateReportFieldTitle(PowerUnitID, passed):
             qualification = ""
@@ -755,6 +776,12 @@ class Application(tk.Frame):
                 tkMessageBox.showinfo("Preliminary Test not run", "Please run the preliminary test before loading the FPGA firmware")
                 return False
             return True
+
+        def CheckPrescansDone():
+            if (RunPrescansButton['bg'] != 'green'):
+                tkMessageBox.showinfo("Prescans not run", "Please run the prescans before running the scans")
+                return False
+            return True 
                             
         def PrintSummaryInGui(PowerBoardID, messageBuffer):
             if PowerBoardID == 'Right':
@@ -792,9 +819,10 @@ class Application(tk.Frame):
 
 
         def WriteDataFiles():
+            timestamp = time.strftime("%Y%m%dT%H%M%S")
+            puList   = ["Right", "Left"]
             if load.get()     == "Low":
                 testList = ["LatchTest", "TemperatureTest"]
-                puList   = ["Right", "Left"]
                 for test in testList :
                     for powerUnit in puList:
                         temporaryFile = "./JUNK/" + test + "_PowerUnit" + powerUnit + ".dat"
@@ -934,6 +962,12 @@ class Application(tk.Frame):
         ddownLoads = tk.OptionMenu(self, load, "Low", "Nominal", "High", command = ddownLoadsColorChange)
         ddownLoads.config(width = 10, bg = 'salmon')
         ddownLoads.grid(row = 9, column = 1, columnspan = 2)
+        def TellMeWhenLoadChanges(*args):
+            if (load.get() == "Low"):
+                RunPrescansButton.configure(state = 'normal')
+            else:
+                RunPrescansButton.configure(state = 'disabled')
+        load.trace("w", TellMeWhenLoadChanges)
         def GetLoadType():
 	    return load.get()
 
@@ -975,13 +1009,19 @@ class Application(tk.Frame):
             self.PowerUnitID = "Left"
             PowerUnitRightButton.config(state = 'normal')
             PowerUnitLeftButton.config(state = 'disabled')
-            PowerUnitRightButton.config(background = 'light grey')
+            PowerUnitRightButton.config(background = "light grey")
             PowerUnitLeftButton.config(background = 'white')
-        PowerUnitLeftButton = tk.Button(self, text = "Power Unit Left", command = PULeftSel, disabledforeground = 'blue', background = 'light grey')
+        if (tsMode == "disabled"):
+            purSelState = tsMode
+            pulSelState = tsMode
+        else:
+            purSelState = "disabled"
+            pulSelState = "normal"
+        PowerUnitLeftButton = tk.Button(self, text = "Power Unit Left", command = PULeftSel, state = pulSelState, disabledforeground = 'blue', background = 'light grey')
         PowerUnitLeftButton.grid(row = 5, column = 4, sticky = 'nsew')
         powerunitScrollbar = tk.Scrollbar(self, orient = 'horizontal')
         powerunitScrollbar.grid(row = 5, column = 5)
-        PowerUnitRightButton = tk.Button(self, text = "Power Unit Right", command = PURightSel, state = 'disabled', disabledforeground = 'blue', background = 'white')
+        PowerUnitRightButton = tk.Button(self, text = "Power Unit Right", command = PURightSel, state = purSelState, disabledforeground = 'blue', background = 'white')
         PowerUnitRightButton.grid(row = 5, column = 6, sticky = 'nsew')
         #######################################################################################
 
@@ -990,41 +1030,48 @@ class Application(tk.Frame):
         #######################################################################################
 
         ###########TEMPERATURE SCAN########################################
-        TemperatureButton = tk.Button(self, text = "O-Temperature test", command = lambda: RunOverTprotectionScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
+        TemperatureButton = tk.Button(self, text = "O-Temperature test", command = lambda: RunOverTprotectionScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID), state = tsMode)
         TemperatureButton.grid(row = 7, column = 4, sticky = 'nsew')
         ##########################################################################################
 
         ### I2C ###########################################################
-        I2CButton = tk.Button(self, text="I2C test", command = lambda: RunI2CTest(PowerUnitID=self.PowerUnitID))
+        I2CButton = tk.Button(self, text="I2C test", command = lambda: RunI2CTest(PowerUnitID=self.PowerUnitID), state = tsMode)
         I2CButton.grid(row = 7, column = 5, sticky = 'nsew')
         ###################################################################
 
         ###########LATCH TEST########################################
-        LatchStatusButton = tk.Button(self, text = "Latch test", command = lambda: RunLatchTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
+        LatchStatusButton = tk.Button(self, text = "Latch test", command = lambda: RunLatchTest(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID), state = tsMode)
         LatchStatusButton.grid(row = 7, column = 6, sticky = 'nsew')
         ##########################################################################################
 
         ######### BIAS VOLTAGE SCAN ###################################################################
-        BiasVoltageScanButton = tk.Button(self, text="Bias scan", command = lambda: RunBiasVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
+        BiasVoltageScanButton = tk.Button(self, text="Bias scan", command = lambda: RunBiasVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID), state = tsMode)
         BiasVoltageScanButton.grid(row = 8, column = 4, sticky = 'nsew')
         ###########################################################################################
 
         ######### POWER VOLTAGE SCAN ###################################################################
-        PowerVoltageButton = tk.Button(self, text="Power scan", command = lambda: RunPowerVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
+        PowerVoltageButton = tk.Button(self, text="Power scan", command = lambda: RunPowerVoltageScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID), state = tsMode)
         PowerVoltageButton.grid(row = 8, column = 5, sticky = 'nsew')
         ###########################################################################################
 
         ###########THRESHOLD SCAN########################################
-        ThresholdScanButton = tk.Button(self, text = "Threshold scan", command = lambda: RunThresholdScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID))
+        ThresholdScanButton = tk.Button(self, text = "Threshold scan", command = lambda: RunThresholdScan(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=False, PowerUnitID=self.PowerUnitID), state = tsMode)
         ThresholdScanButton.grid(row = 8, column = 6, sticky = 'nsew')
         #############################################################################
 
         ######### RUN ALL TESTS  #########################################################
         tk.Label(self, text = "Full test procedure (on both power units)", fg="black").grid(row = 9, column = 4, columnspan = 3)
         #######################################################################################
+
+        ### Button to run all the tests but the scans ##########################################################
+        RunPrescansButton = tk.Button(self, text="Run Prescans", command = lambda: RunPrescans(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True))
+        RunPrescansButton.configure(state = 'disabled')
+        RunPrescansButton.grid(row = 10, column = 4, sticky = 'nsew')
+        #StopAllTestsButton = tk.Button(self, text="Stop All Tests", command = StopAllScans, state = 'disabled')
+        #StopAllTestsButton.grid(row = 9, column = 6, sticky = 'nsew')
         
         ### Run all test buttons ##########################################################
-        RunAllTestsButton = tk.Button(self, text="Run All Tests", command = lambda: RunAllScans(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True))
+        RunAllTestsButton = tk.Button(self, text="Run All Scans", command = lambda: RunAllScans(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True))
         RunAllTestsButton.grid(row = 10, column = 5, sticky = 'nsew')
         #StopAllTestsButton = tk.Button(self, text="Stop All Tests", command = StopAllScans, state = 'disabled')
         #StopAllTestsButton.grid(row = 9, column = 6, sticky = 'nsew')
@@ -1044,7 +1091,7 @@ class Application(tk.Frame):
             subprocess.call(['/bin/bash', '-c', "git push origin master"])
             print "Done pushing data to the repo"
             
-        PushDataToRepoButton = tk.Button(self, text = "Push Data", command = PushDataToRepo)
+        PushDataToRepoButton = tk.Button(self, text = "Push Data", command = PushDataToRepo, state = tsMode)
         PushDataToRepoButton.grid(row = 10, column = 6, sticky = 'nsew')
         #############################################################################
 
@@ -1113,5 +1160,3 @@ root = tk.Tk()
 app = Application(master=root)
 app.master.title("Production Power Board Qualification GUI")
 app.mainloop()
-
-

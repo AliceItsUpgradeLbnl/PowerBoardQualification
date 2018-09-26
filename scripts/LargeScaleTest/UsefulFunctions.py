@@ -190,7 +190,7 @@ def ReadBiasADC(PowerUnitID):
         ADCValue = ReadFromDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, NumOfBytesToRead)
         Array.append( ((ADCValue[0]>>4)/4096.)*2.56 )
   
-    I = Array[0]
+    I = Array[0] 
     V = Array[2]*(-2.)
     return I,V
 
@@ -305,7 +305,7 @@ def UnlatchBias(channel,PowerUnitID):
     if (channel > 8):
         print 'Channel #%d for bias does not exist' % (channel)
     LinkType = IOExpanderBiasLink
-    WriteToDevice(I2CLink(PowerUnitID, LinkType), IOExpanderBiasAddress, int(0xFF^2**channel)) 
+    WriteToDevice(I2CLink(PowerUnitID, LinkType), IOExpanderBiasAddress, int(0xFF^(2**channel))) 
 
 def DisablePowerAll(PowerUnitID):
     #print 'Disabling ALL power channels'

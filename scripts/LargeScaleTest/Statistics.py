@@ -1,27 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
-import sys
 from   array import array
 import ROOT
 
-import PowerboardTestDB as db
-import ReadConfig
-import ReadParams
-
-from SummaryMethods import AppendThresholdToSummaryFile
-from SummaryMethods import AppendBiasToSummaryFile
-from SummaryMethods import AppendPowerToSummaryFile
-
 columns = {}
+
 columns["ThresholdScan"]   = ["ChannelNumber", "ThDAC", "VsetDAC", "V", "I", "R", "T", "LUState"]
 columns["VoltageScan"]     = ["ChannelNumber", "VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState"]
 columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState"]
-columns["TemperatureTest"] = ["Vavg", "Itot", "TBoard", "TAux1", "TAux2"]
-columns["LatchTest"]       = ["ChannelNumber", "BeforeEnabling", "AfterEnabling", "AfterLatching"]
-columns["TestInfo"]        = ["BoardNumber", "BoardVersion", "TestNumber", "LoadType", "PowerUnit", "Config", "Tester", "Timestamp"]
-
-configFolder = '/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationConfig/'
-paramsFolder = '/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationParams/'
 
 class Scan(object):
     def __init__(self, testName, hasChannelData):
@@ -29,8 +15,6 @@ class Scan(object):
         self.columns = columns[testName]
         self.testName = testName
         self.hasChannelData = hasChannelData
-        self.config = ReadConfig.GetMostRecentConfig(configFolder)
-        self.params = ReadParams.GetMostRecentParams(paramsFolder)
 
     def readFile(self, filename):
         with open(filename) as f:
@@ -205,24 +189,18 @@ class ThresholdScan(Scan):
 
     def _GetUpper(self, graphType):
         return self.expectedUpperValues[graphType]
-       
+ 
+
 class VoltageScan(Scan):
-    def __init__(self, PowerUnitID, load, summary):
+    def __init__(self):
         Scan.__init__(self, "VoltageScan", True)
         self.vslopesgraph  = []
         self.vintsgraph    = []
         self.ivslopesgraph = []
         self.islopesgraph  = []
         self.iintsgraph    = []
-        self.load          = load
-        self.PowerUnitID   = PowerUnitID
-        self.summary       = summary
-        self.expectedLowerValues = self.params["vscanExpectedLowerValues"][self.load]
-        self.expectedUpperValues = self.params["vscanExpectedUpperValues"][self.load]
  
-    def visualizeAndCheck(self, showFits = False, displayData = False, saveToFile = False):
-        hasProblem = False
-
+    def visualizeAndCheck(self, showFits = False):
         # setting up all of the arrays
         channels, vints, vslopes, ivslopes, iints, islopes = array('f'), array('f'), array('f'), array('f'), array('f'), array('f')  
         channelserr, vintserr, vslopeserr, ivslopeserr, iintserr, islopeserr = array('f'), array('f'), array('f'), array('f'), array('f'), array('f')
@@ -251,17 +229,8 @@ class VoltageScan(Scan):
                     vlowers.append(float(step["V"]))
                 if int(step["VsetDAC"]) == 250:
                     vuppers.append(float(step["V"]))
-                # Min voltage check
-                if int(step["VsetDAC"]) == 0 and vlowers[-1] > self._GetUpper("vlower"):
-                    hasProblem = True
-                    print "Minimum voltage is higher than expected. Limit " + str(self._GetUpper("vlower")) + ", Measured: " + str(step["V"]) 
-                # Max voltage check
-                if int(step["VsetDAC"]) == 250 and vuppers[-1] < self._GetLower("vupper"):
-                    hasProblem = True
-                    print "Maximum voltage is lower than expected. Limit " + str(self._GetLower("vupper")) + ", Measured: " + str(step["V"]) 
-
                 # Skip what is above max fit value
-                if int(step["VsetDAC"]) > self.config["PowerScan_maxfit"][self.load]:
+                if int(step["VsetDAC"]) > 250:
                     continue
 
                 # Fill data structures
@@ -271,15 +240,6 @@ class VoltageScan(Scan):
                 bin = vrms.FindBin(float(step["VsetDAC"]), float(channelNumber))
                 vrms.SetBinContent(bin, float(step["Vrms"]))
                 irms.SetBinContent(bin, float(step["Irms"]))
-
-                # Voltage noise check
-                if (float(step["Vrms"]) > self._GetUpper("vnoise")):
-                    hasProblem = True
-                    print "Voltage noise is higher than expected. Limit " + str(self._GetUpper("vnoise")) + ", Measured: " + str(step["Vrms"]) 
-                # Current noise check
-                if (float(step["Irms"]) > self._GetUpper("inoise")):
-                    hasProblem = True
-                    print "Current noise is higher than expected. Limit " + str(self._GetUpper("inoise")) + ", Measured: " + str(step["Irms"]) 
 
             # Creating and fitting each graph
             vdacgraph, vdacfit = self._createAndFitGraph(dac, v, int(channelNumber)%8)
@@ -302,43 +262,6 @@ class VoltageScan(Scan):
 
             #fitgraphs.append((vdacgraph, ivgraph, idacgraph, ))
 	    fitgraphs.append((vdacgraph, ivgraph, idacgraph, vdacgraph_subtracted))
-          
-        if saveToFile:
-            AppendPowerToSummaryFile(self.summary, self.PowerUnitID, self.load, vlowers, vuppers, vints, vslopes, iints, islopes)
-
-        # Checking errors of voltage slope
-        if any([x > self._GetUpper("vslopesanaerr") for x in vslopeserr[0::2]]):
-            hasProblem = True
-            print "Voltage scan vslopesanaerr exceed limit. Limit: " + str(self._GetUpper("vslopesanaerr")) + ", Read values: " + str(vslopeserr[0::2])
-        # Checking errors of voltage intercept
-        if any([x > self._GetUpper("vintsanaerr") for x in vintserr[0::2]]):
-            hasProblem = True
-            print "Voltage scan vintsanaerr exceed limit. Limit: " + str(self._GetUpper("vintsanaerr")) + ", Read values: " + str(vintserr[0::2])
-        # Checking errors of current slope
-        if any([x > self._GetUpper("islopesanaerr") for x in islopeserr[0::2]]):
-            hasProblem = True
-            print "Voltage scan islopesanaerr exceed limit. Limit: " + str(self._GetUpper("islopesanaerr")) + ", Read values: " + str(islopeserr[0::2])
-        # Checking errors of current intercept
-        if any([x > self._GetUpper("iintsanaerr") for x in iintserr[0::2]]):
-            hasProblem = True
-            print "Voltage  scan iintsanaerr exceed limit. Limit: " + str(self._GetUpper("iintsanaerr")) + ", Read values: " + str(iintserr[0::2])
-
-        # Checking errors of voltage slope
-        if any([x > self._GetUpper("vslopesdigerr") for x in vslopeserr[1::2]]):
-            hasProblem = True
-            print "Voltage scan vslopesdigerr exceed limit. Limit: " + str(self._GetUpper("vslopesdigerr")) + ", Read values: " + str(vslopeserr[1::2])
-        # Checking errors of voltage intercept
-        if any([x > self._GetUpper("vintsdigerr") for x in vintserr[1::2]]):
-            hasProblem = True
-            print "Voltage scan vintsdigerr exceed limit. Limit: " + str(self._GetUpper("vintsdigerr")) + ", Read values: " + str(vintserr[1::2])
-        # Checking errors of current slope
-        if any([x > self._GetUpper("islopesdigerr") for x in islopeserr[1::2]]):
-            hasProblem = True
-            print "Voltage scan islopesdigerr exceed limit. Limit: " + str(self._GetUpper("islopesdigerr")) + ", Read values: " + str(islopeserr[1::2])
-        # Checking errors of current intercept
-        if any([x > self._GetUpper("iintsdigerr") for x in iintserr[1::2]]):
-            hasProblem = True
-            print "Voltage  scan iintsdigerr exceed limit. Limit: " + str(self._GetUpper("iintsdigerr")) + ", Read values: " + str(iintserr[1::2])
 
         if showFits:
             datacanvas = ROOT.TCanvas("datacanvas", "Data and fits")
@@ -387,12 +310,6 @@ class VoltageScan(Scan):
         vintsgraph.SetTitle("Intercept [V] vs Channel")
         vintsgraph.SetMarkerStyle(4)
         vintsgraph.GetXaxis().SetLimits(-1,17)
-        if self._checkAndDraw(vintsgraph, vints[0::2], "vintsana"):
-            hasProblem = True
-            print "Voltage scan vintsana is outside boundaries. Boundaries: " + str(self._GetLower("vintsana")) + ", " + str(self._GetUpper("vintsana")) + ", Read values: " + str(vints[0::2])
-        if self._checkAndDraw(vintsgraph, vints[1::2], "vintsdig"):
-            hasProblem = True
-            print "Voltage scan vintsdig is outside boundaries. Boundaries: " + str(self._GetLower("vintsdig")) + ", " + str(self._GetUpper("vintsdig")) + ", Read values: " + str(vints[1::2])
 
         # Voltage slopes and checks
         fitcanvas.cd(2)
@@ -401,12 +318,6 @@ class VoltageScan(Scan):
         vslopesgraph.SetMarkerStyle(4)
         vslopesgraph.GetXaxis().SetLimits(-1,17)
         vslopesgraph.GetYaxis().SetLabelSize(0.07)
-        if self._checkAndDraw(vslopesgraph, vslopes[0::2], "vslopesana"):
-            hasProblem = True
-            print "Voltage scan vslopesana is outside boundaries. Boundaries: " + str(self._GetLower("vslopesana")) + ", " + str(self._GetUpper("vslopesana")) + ", Read values: " + str(vslopes[0::2])
-        if self._checkAndDraw(vslopesgraph, vslopes[1::2], "vslopesdig"):
-            hasProblem = True
-            print "Voltage scan vslopesdig is outside boundaries. Boundaries: " + str(self._GetLower("vslopesdig")) + ", " + str(self._GetUpper("vslopesdig")) + ", Read values: " + str(vslopes[1::2])
 
         # Inverse of loads no checks
         fitcanvas.cd(3)
@@ -417,8 +328,6 @@ class VoltageScan(Scan):
         ivslopesgraph.Draw("ap")
         ivslopesgraph.GetXaxis().SetLabelSize(0.07)
         ivslopesgraph.GetYaxis().SetLabelSize(0.07)
-        self._checkAndDraw(ivslopesgraph, ivslopes[0::2], "ivslopesana", True) # Not checking this - not necessary, just plotting
-        self._checkAndDraw(ivslopesgraph, ivslopes[1::2], "ivslopesdig", True) # Not checking this - not necessary, just plotting
 
         # Current intercepts and checks
         fitcanvas.cd(4)
@@ -428,12 +337,6 @@ class VoltageScan(Scan):
         iintsgraph.GetXaxis().SetLimits(-1,17)
         iintsgraph.GetXaxis().SetLabelSize(0.07)
         iintsgraph.GetYaxis().SetLabelSize(0.07)
-        if self._checkAndDraw(iintsgraph, iints[0::2], "iintsana"):
-            hasProblem = True
-            print "Voltage scan iintsana is outside boundaries. Boundaries: " + str(self._GetLower("iintsana")) + ", " + str(self._GetUpper("iintsana")) + ", Read values: " + str(iints[0::2])
-        if self._checkAndDraw(iintsgraph, iints[1::2], "iintsdig"):
-            hasProblem = True
-            print "Voltage scan iintsdig is outside boundaries. Boundaries: " + str(self._GetLower("iintsdig")) + ", " + str(self._GetUpper("iintsdig")) + ", Read values: " + str(iints[1::2])
 
         # Current slopes and checks
         fitcanvas.cd(5)
@@ -443,12 +346,6 @@ class VoltageScan(Scan):
         islopesgraph.GetXaxis().SetLimits(-1,17)
         islopesgraph.GetXaxis().SetLabelSize(0.07)
         islopesgraph.GetYaxis().SetLabelSize(0.07)
-        if self._checkAndDraw(islopesgraph, islopes[0::2], "islopesana"):
-            hasProblem = True
-            print "Voltage scan islopesana is outside boundaries. Boundaries: " + str(self._GetLower("islopesana")) + ", " + str(self._GetUpper("islopesana")) + ", Read values: " + str(islopes[0::2])
-        if self._checkAndDraw(islopesgraph, islopes[1::2], "islopesdig"):
-            hasProblem = True
-            print "Voltage scan islopesdig is outside boundaries. Boundaries: " + str(self._GetLower("islopesdig")) + ", " + str(self._GetUpper("islopesdig")) + ", Read values: " + str(islopes[1::2])
 
         rmscanvas = ROOT.TCanvas("rmscanvas", "RMS measurements")
         rmscanvas.Divide(2,1)
@@ -457,11 +354,7 @@ class VoltageScan(Scan):
         rmscanvas.cd(2)
         irms.Draw("COLZ")
 
-        if displayData:
-            sys.stdin.flush()
-            raw_input("Press enter to continue \n")
-
-        return hasProblem
+        return vints, vslopes, ivslopes, iints, islopes
 
     def _createAndFitGraph(self, x, y, color):
         graph = ROOT.TGraph(len(x), x, y)
@@ -486,58 +379,13 @@ class VoltageScan(Scan):
         graph_sub.SetMarkerStyle(4)
         return graph_sub
 
-    def _checkParams(self, values, graphType):
-        graphMin  = self._GetLower(graphType)
-        graphMax  = self._GetUpper(graphType)
-
-        exceedsRange = False
-        for value in values:
-	    if value > graphMax or value < graphMin:
-	        exceedsRange = True
-
-        return exceedsRange
-
-    def _checkAndDraw(self, graph, values, graphType, drawOnly = False):
-        graph.Draw("ap")
-        if not drawOnly:
-            graphMin  = self._GetLower(graphType)
-            graphMax  = self._GetUpper(graphType)
-
-            exceedsRange = False
-            for value in values:
-                if value > graphMax or value < graphMin:
-                    exceedsRange = True
-
-            if exceedsRange:
-                # draw dashed horizontal lines indicating the tolerance
-                # actually, turn everything red, because ROOT is a pain
-                graph.SetMarkerColor(2)
-                graph.SetMarkerStyle(20)
-                graph.SetLineColor(2)
-                graph.SetFillColor(2)
-
-            return exceedsRange
-
-        return False
-
-    def _GetLower(self, graphType):
-        return self.expectedLowerValues[graphType]
-
-    def _GetUpper(self, graphType):
-        return self.expectedUpperValues[graphType]
-
 class BiasScan(Scan):
-    def __init__(self, PowerUnitID, load, summary):
+    def __init__(self):
         Scan.__init__(self, "BiasScan", False)
         self.vgraph = []
         self.igraph = []
-        self.load          = load
-        self.PowerUnitID  = PowerUnitID
-        self.summary       = summary
-        self.expectedLowerValues  = self.params["bvscanExpectedLowerValues"][self.load]
-        self.expectedUpperValues  = self.params["bvscanExpectedUpperValues"][self.load]
 
-    def visualizeAndCheck(self, displayData = False, saveToFile = False):
+    def visualizeAndCheck(self):
         hasProblem = False
 
         dac, v, i, vrms, dv, irms, di = array('f'), array('f'), array('f'), array('f'), array('f'), array('f'), array('f')
@@ -548,22 +396,11 @@ class BiasScan(Scan):
                 vlower = float(step["V"])
 	    if int(step["VsetDAC"]) == 0:
                 vupper = float(step["V"])
-            # Min voltage check
-	    if int(step["VsetDAC"]) == 130 and float(step["V"]) > self._GetUpper("vlower"):
-		hasProblem = True
-		print "Minimum voltage is higher than expected. Limit " + str(self._GetUpper("vlower")) + ", Measured: " + str(step["V"]) 
-            # Max voltage check
-	    if int(step["VsetDAC"]) == 0 and float(step["V"]) < self._GetLower("vupper"):
-		hasProblem = True
-		print "Maximum voltage is lower than expected. Limit " + str(self._GetLower("vupper")) + ", Measured: " + str(step["V"]) 
-
             # Skip what is above max fit value
             if int(step["VsetDAC"]) > self.config["BiasScan_maxfit"][self.load]:
                 continue
             
             # Fill data structures
-            if float(step["I"]) == 0.:
-                continue
             dac.append(float(step["VsetDAC"]))
             v.append(float(step["V"]))
             i.append(float(step["I"]))
@@ -572,15 +409,6 @@ class BiasScan(Scan):
             irms.append(float(step["Irms"]))
             di.append(float(step["dI"]))
 
-        # Voltage noise check
-        if any(rms > self._GetUpper("vnoise") for rms in vrms):
-            hasProblem = True
-            print "Voltage noise is higher than expected. Limit " + str(self._GetUpper("vnoise")) + ", Measured: " + str(vrms) 
-        # Voltage noise check
-        if any(rms > self._GetUpper("inoise") for rms in irms):
-            hasProblem = True
-            print "Current noise is higher than expected. Limit " + str(self._GetUpper("inoise")) + ", Measured: " + str(irms) 
-            
         vgraph, vfit = self._createAndFitGraph(dac, v)
         vslope    = vfit.GetParameter(1)
         vslopeerr = vfit.GetParError(1)
@@ -597,41 +425,6 @@ class BiasScan(Scan):
         self.igraph = igraph
         dvgraph = ROOT.TGraph(len(dac), dac, dv)
         digraph = ROOT.TGraph(len(dac), dac, di)
-        print iint
-
-        if saveToFile:
-            AppendBiasToSummaryFile(self.summary, self.PowerUnitID, self.load, vlower, vupper, vint, vslope, iint, islope)
-
-        # Checking fit params
-        if self._checkParam(vslope, "vslope"):
-            hasProblem = True
-            print "Bias scan vslope is outside boundaries. Boundaries: " + str(self._GetLower("vslope")) + ", " + str(self._GetUpper("vslope")) + ", Read: " + str(vslope)
-        if self._checkParam(islope, "islope"):
-            hasProblem = True
-            print "Bias scan islope is outside boundaries. Boundaries: " + str(self._GetLower("islope")) + ", " + str(self._GetUpper("islope")) + ", Read: " + str(islope)
-        if self._checkParam(vint, "vint"):
-            hasProblem = True
-            print "Bias scan vint is outside boundaries. Boundaries: " + str(self._GetLower("vint")) + ", " + str(self._GetUpper("vint")) + ", Read: " + str(vint)
-        if self._checkParam(iint, "iint"):
-            hasProblem = True
-            print "Bias scan iint is outside boundaries. Boundaries: " + str(self._GetLower("iint")) + ", " + str(self._GetUpper("iint")) + ", Read: " + str(iint)
-
-        # Checking errors of voltage slope
-        if vslopeerr > self._GetUpper("vslopeerr"):
-            hasProblem = True
-            print "Bias scan vslopeerr exceed limit. Limit: " + str(self._GetUpper("vslopeerr")) + ", Read values: " + str(vslopeerr)
-        # Checking errors of voltage intercept
-        if vinterr > self._GetUpper("vinterr"):
-            hasProblem = True
-            print "Bias scan vinterr exceed limit. Limit: " + str(self._GetUpper("vinterr")) + ", Read values: " + str(vinterr)
-        # Checking errors of current slope
-        if islopeerr > self._GetUpper("islopeerr"):
-            hasProblem = True
-            print "Bias scan islopeerr exceed limit. Limit: " + str(self._GetUpper("islopeerr")) + ", Read values: " + str(islopeerr)
-        # Checking errors of current intercept
-        if iinterr > self._GetUpper("iinterr"):
-            hasProblem = True
-            print "Bias scan iinterr exceed limit. Limit: " + str(self._GetUpper("iinterr")) + ", Read values: " + str(iinterr)
 
         biascanvas = ROOT.TCanvas("biascanvas", "Bias voltage scan results")
         biascanvas.Divide(2,2)
@@ -652,11 +445,7 @@ class BiasScan(Scan):
         digraph.Draw("ap")
         self._setAxes(digraph, "VsetDAC", "Noise [mA]")
 
-        if displayData:
-            sys.stdin.flush()
-            raw_input("Press enter to continue")
-
-        return hasProblem
+        return vint, vslope, ivslope, iint, islope
 
     def _createAndFitGraph(self, x, y):
         graph = ROOT.TGraph(len(x), x, y)
@@ -679,8 +468,6 @@ class BiasScan(Scan):
             graph.GetPoint(n,x,y)
             ysub = y-fit.Eval(x)
             graph_sub.SetPoint(n, x, ysub)
-            #print x
-            #print 'ysub = %2.4f, y=%2.4f, eval =%2.4f'%(ysub,y,fit.Eval(x))   
         graph_sub.SetMarkerColor(color)
         graph_sub.SetLineColor(color)
         graph_sub.SetMarkerStyle(4)
@@ -691,47 +478,3 @@ class BiasScan(Scan):
         graph.SetTitle("")
         graph.GetXaxis().SetTitle(xtitle)
         graph.GetYaxis().SetTitle(ytitle)
-
-    def _checkParam(self, value, valueType):
-        resultLower = (value > self._GetLower(valueType))
-        resultUpper = (value < self._GetUpper(valueType))
-        return not (resultLower and resultUpper)
-
-    def _GetLower(self, graphType):
-        return self.expectedLowerValues[graphType]
-
-    def _GetUpper(self, graphType):
-        return self.expectedUpperValues[graphType]
-
-class TemperatureTest(Scan):
-    def __init__(self):
-        Scan.__init__(self, "TemperatureTest", False)
-
-class LatchupTest(Scan):
-    def __init__(self):
-        Scan.__init__(self, "LatchTest", False)
-
-class TestInfo(object):
-    def __init__(self):
-        self.Data = {}
-
-    def parseFilename(self, filename):
-        metadata = filename.split("_")
-
-        self.Data["Timestamp"] = metadata[0]
-        # strip off "BoardID"
-        self.Data["BoardNumber"] = metadata[1][7:]
-        # strip off "v"
-        self.Data["BoardVersion"] = metadata[2][1:]
-        # strip off "PowerUnitID"
-        self.Data["PowerUnit"] = metadata[3][11:]
-        # strip off "LoadType"
-        self.Data["LoadType"] = metadata[4][8:]
-        # strip off "Config"
-        self.Data["Config"] = metadata[5][6:]
-        # strip off ".txt"
-        self.Data["Tester"] = metadata[7][:-4]
-
-    def readDB(self, boardNumber, testId=0):
-        self.Data = db.getRows("TestInfo", boardNumber, testId)[0]
-        self.Id = self.Data["Id"]

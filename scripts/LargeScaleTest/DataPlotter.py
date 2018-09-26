@@ -3,7 +3,7 @@
 import PowerboardTestData as PbData
 import ROOT
 
-def PlotPowerVoltageScanData(inputFile, load):
+def PlotVoltageScanData(inputFile, load):
     vsData = PbData.VoltageScan(load) 
     vsData.readFile(inputFile)
 
@@ -16,8 +16,8 @@ def PlotPowerVoltageScanData(inputFile, load):
 
     return vsHasProblem
 
-def PlotBiasVoltageScanData(inputFile, load):
-    bvsData = PbData.BiasVoltageScan(load)
+def PlotBiasScanData(inputFile, load):
+    bvsData = PbData.BiasScan(load)
     bvsData.readFile(inputFile)
     bvsHasProblem = bvsData.visualizeAndCheck(True)
 
