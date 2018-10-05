@@ -28,6 +28,12 @@ def DeleteBoardFiles(boardId):
     DeleteBoardTxtFiles(boardId)
     DeleteBoardDatFiles(boardId)
 
+def DeleteLoadFiles(boardId, load):
+    if load == "High":
+        DeleteBoardTxtFiles(boardId)
+    DeleteBoardLoadDatFiles(boardId, load)
+    
+
 def DeleteBoardTxtFiles(boardId):
     listOfTxtFilesInResultsDir = GetTxtFiles()
     listOfBoardidFiles = GetBoardIdFiles(listOfTxtFilesInResultsDir, boardId)
@@ -42,10 +48,20 @@ def DeleteBoardDatFiles(boardId):
     for fileToDelete in listOfFilesToDelete:
         subprocess.call(["/bin/bash", "-c", "rm -f " + resultsFolder + fileToDelete])
 
+def DeleteBoardLoadDatFiles(boardId, load):
+    listOfDatFilesInResultsDir = GetDatFiles()
+    listOfBoardidFiles = GetBoardIdFiles(listOfDatFilesInResultsDir, boardId)
+    listOfLoadFiles    = GetLoadTypeFiles(listOfBoardidFiles, load)
+    listOfFilesToDelete = [(x + ".dat") for x in listOfLoadFiles]
+    for fileToDelete in listOfFilesToDelete:
+        subprocess.call(["/bin/bash", "-c", "rm -f " + resultsFolder + fileToDelete])
+
 def GetListOfTestTypes(loadType):
     if loadType == 'Low':
         return ["TemperatureTest", "LatchTest", "BiasScan", "VoltageScan", "ThresholdScan"]
-    elif loadType == 'Nominal' or loadType == 'High':
+    elif loadType == 'High':
+        return ["BiasScan", "VoltageScan", "ThresholdScan", "VoltageCalibration", "BiasCalibration"]
+    elif loadType == 'Nominal':
         return ["BiasScan", "VoltageScan", "ThresholdScan"]
 
     print "Wrong load type provided to check files"

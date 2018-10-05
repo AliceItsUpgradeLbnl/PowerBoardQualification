@@ -7,7 +7,8 @@ columns = {}
 
 columns["ThresholdScan"]   = ["ChannelNumber", "ThDAC", "VsetDAC", "V", "I", "R", "T", "LUState"]
 columns["VoltageScan"]     = ["ChannelNumber", "VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState"]
-columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState"]
+#columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState"]
+columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T"]
 
 class Scan(object):
     def __init__(self, testName, hasChannelData):
@@ -397,8 +398,10 @@ class BiasScan(Scan):
 	    if int(step["VsetDAC"]) == 0:
                 vupper = float(step["V"])
             # Skip what is above max fit value
-            if int(step["VsetDAC"]) > self.config["BiasScan_maxfit"][self.load]:
+            if float(step["I"]) == 0.0:
                 continue
+            #if int(step["VsetDAC"]) > self.config["BiasScan_maxfit"][self.load]:
+            #    continue
             
             # Fill data structures
             dac.append(float(step["VsetDAC"]))
@@ -445,7 +448,7 @@ class BiasScan(Scan):
         digraph.Draw("ap")
         self._setAxes(digraph, "VsetDAC", "Noise [mA]")
 
-        return vint, vslope, ivslope, iint, islope
+        return vint, vslope, iint, islope
 
     def _createAndFitGraph(self, x, y):
         graph = ROOT.TGraph(len(x), x, y)

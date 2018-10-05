@@ -36,10 +36,24 @@ def LatchTest(output, load, PowerUnitID):
     ponVoltages.append(ponBiasVoltage)
     ponCurrents = [('%.3f' % (x*100)) for x in ponCurrents]
     ponVoltages = [('%.4f' % (x*100)) for x in ponVoltages]
+    # Check positive voltages at power on
+    if any([float(x) > 10. for x in ponVoltages[0:16]]):
+        print "Power on voltage for positive voltages is not ~0V"
+        sys.exit()
+    # Check positive currents at power on
+    if any([(float(x) > 7. or x < -7.) for x in ponCurrents[0:16]]):
+        print "Power on current for positive voltages is not ~0A"
+        sys.exit()
+    # Check negative regulator voltage at power on
+    if (float(ponVoltages[16]) > -4500 or float(ponVoltages[16]) < -5000):
+        print "Power on voltage for negative voltage regulator is not ~-5V"
+        sys.exit()
+    # Check negative regulator current at power on
+    if (float(ponCurrents[16]) > 70 or float(ponCurrents[16]) < 30):
+        print ponCurrents[16]
+        print "Power on current for negative voltage regulator is not ~50mA"
+        sys.exit()
 
-    # Rounding all results:
-
-    
     lines = []
     lines.append(" ")
     lines.append("Power on Voltages and currents:")
@@ -151,19 +165,17 @@ def LatchTest(output, load, PowerUnitID):
     LowerThresholdsToMin(PowerUnitID) # To latch everything and erase whatever previous state
     RaiseThresholdsToMax(PowerUnitID)
 
-    # Testing bias section - Channels 0-2
-    ConfigureBiasADC(PowerUnitID) # this is necessary to be able to read ADCs
+    # Starting test of the bias circuitry
     print " "
-    SetBiasVoltage(0x80, PowerUnitID)
+    SetBiasVoltage(0x50, PowerUnitID)
     time.sleep(1.)
     poweronStates = 0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)
-    poweronCurrent, poweronVoltage = ReadBiasADC(PowerUnitID) 
     
     print 'Printing results:'
     print 'CH#   After PB powering  /  After Enabling  /  After Disabling  /                                                      All checks passed?'
     #DisableBiasAll(PowerUnitID)
     biasRes = {"Low": 1000., "Nominal": 1000., "High": 330.}
-    currentOffset = 0.
+    offset = 0.
     for biasOutput in range(0, 3):
         idleCurrent, voltage = ReadBiasADC(PowerUnitID) 
         UnlatchBiasWithMask(0x7, PowerUnitID)
@@ -172,7 +184,7 @@ def LatchTest(output, load, PowerUnitID):
         time.sleep(0.25) # ADC conversion time
         currentThree, voltageThree = ReadBiasADC(PowerUnitID) 
         if biasOutput == 0:
-            offset = currentThree - voltageThree/biasRes
+            offset = currentThree - abs(voltageThree)*(3./biasRes[load] + 1./100.)
         UnlatchBiasWithMask(0x7 - 2**biasOutput, PowerUnitID)
         time.sleep(0.1)  # Enable time
         afterEnablingStates = 0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)
@@ -187,11 +199,11 @@ def LatchTest(output, load, PowerUnitID):
             print "Bias channel states are wrong!"            
             line = "%2s %10d %23d %18d %70s" %("B" + str(biasOutput), poweronStates, 0x7 - afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not (abs(finalCurrent - idleCurrent) < 0.001 and idleCurrent < 0.015 and voltage < -4.5):
-            print "Idle current exceeds limit (15mA), or mismatch between idle current and current after all channel disable, or voltage is higher than -4.5V"
+        elif not (abs(finalCurrent - idleCurrent) < 0.0001 and voltage > -3.5 and voltage < -2.5):
+            print "Mismatch between idle current and current after all channel disable, or voltage not in the expected range"
             line = "%2s %10d %23d %18d %70s" %("B" + str(biasOutput), poweronStates, 0x7 - afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not ((abs(abs(voltage)/(currentThree - current) - biasRes[load])/biasRes[load]) < 0.15):
+        elif not ((abs(abs(voltage)/(currentThree - current) - biasRes[load])/biasRes[load]) < 0.1):
             print "Measured load resistance does not match actual load"
             line = "%2s %10d %23d %18d %70s" %("B" + str(biasOutput), poweronStates, 0x7 - afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
@@ -201,6 +213,9 @@ def LatchTest(output, load, PowerUnitID):
 	print line
         with open(output,"ab") as f:
             f.write(str(line) + "\n")
+
+    SetBiasVoltage(0x80, PowerUnitID)
+    time.sleep(1.)  # Wait before sampling
 
     idleCurrent, voltage = ReadBiasADC(PowerUnitID) 
     UnlatchBias(3, PowerUnitID)
@@ -219,12 +234,12 @@ def LatchTest(output, load, PowerUnitID):
             print "Bias channel states are wrong!"            
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not ((currentLimit < 0.065 and currentLimit > 0.055) and (voltage < -2.0 and voltage > -3.0)):
-            print "Current limit outside boundaries (55mA - 65mA) or voltage outside boundaries (-3.0, -2.0)"            
+        elif not ((currentLimit < 0.105 and currentLimit > 0.075) and (voltage < -1.5 and voltage > -2.0)):
+            print "Current limit outside boundaries (75mA - 105mA) or voltage outside boundaries (-3.0, -2.0)"            
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not (abs(finalCurrent - idleCurrent) < 0.001 and idleCurrent < 0.015):
-            print "Idle current exceeds limit (15mA) or mistmatch between idle current and current after all channel disabled" 
+        elif not ((abs(finalCurrent - idleCurrent) < 0.0001) and ((abs(voltage)/currentLimit) - 28.)/28. < 0.1) :
+            print "Mistmatch between idle current and current after all channel disabled or wrong load measurement" 
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
         else:
@@ -234,11 +249,11 @@ def LatchTest(output, load, PowerUnitID):
             print "Bias channel states are wrong!"            
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not (abs(finalCurrent - idleCurrent) < 0.001 and idleCurrent < 0.015 and voltage < -4.5):
-            print "Idle current exceeds limit (15mA), or mismatch between idle current and current after all channel disable, or voltage is higher than -4.5V"
+        elif not (abs(finalCurrent - idleCurrent) < 0.0001 and voltage < -4.5):
+            print "Mismatch between idle current and current after all channel disable, or voltage is higher than -4.5V"
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not ((abs(abs(voltage)/(current - idleCurrent) - biasRes[load])/biasRes[load]) < 0.15):
+        elif not ((abs(abs(voltage)/(current - idleCurrent) - biasRes[load])/biasRes[load]) < 0.1):
             print "Measured load resistance does not match actual load"
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
@@ -253,8 +268,7 @@ def LatchTest(output, load, PowerUnitID):
         with open(output,"ab") as f:
             f.write(" " + "\n")
             f.write("Negative voltage regulator hardware current limit measured with Low current loads: %f\n" % currentLimit)
-        print "Negative voltage regulator hardware offset measured with Low current loads: %f" % offset
-        print "Negative voltage regulator hardware current limit measured with Low current loads: %f" % currentLimit
+
 
     CloseFtdi() # Ends communication with RDO board
 

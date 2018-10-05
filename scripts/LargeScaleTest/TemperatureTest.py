@@ -1,5 +1,4 @@
 #!/usr/bin/python
-import time
 import sys
 
 from UsefulFunctions import *
@@ -7,9 +6,22 @@ from math import sqrt
 
 from SummaryMethods import AppendTemperatureToSummaryFile
 
+import time
+from datetime import datetime
+
+def CleanChauvenet(tempList, tempListMean):
+    done = False
+    while not done:
+        for temp in tempList:
+            if abs(temp - tempListMean) > 2.:
+                tempList = [x for x in tempList if x != temp]
+                continue
+        done = True
+    return tempList
+
 def TemperatureTest(output, summary, PowerUnitID = 1, Vset=125, saveToFile = False):
     # Writing header to output file
-    header = "Vavg[V]      Itot[A]     Tboard[C]     Taux1[C]     Taux2[C]     LUstate"
+    header = "Vavg[V]      Itot[A]     Tboard[C]     Taux1[C]     Taux2[C]     LUstate              Timestamp"
     with open(output,"ab") as f:
         f.write(str(header) + "\n")
 
@@ -20,13 +32,6 @@ def TemperatureTest(output, summary, PowerUnitID = 1, Vset=125, saveToFile = Fal
     ConfigureRTD(PowerUnitID) # Configure RTD to be able to read it
     ConfigurePowerADC(PowerUnitID) # Configure power ADC to be able to read voltages/currents 
     SetPowerVoltageAll(Vset, PowerUnitID) 
-
-    # Lowering thresholds to latch enabled channels, raising threshold
-    LowerThresholdsToMin(PowerUnitID) 
-    time.sleep(0.5)
-    RaiseThresholdsToMax(PowerUnitID) #to avoid latching
-    UnlatchPowerAll(PowerUnitID)   # Unlatch all channels
-    time.sleep(0.5)
   
     # Defining some initial variables
     boardSensorID  = 1
@@ -37,23 +42,37 @@ def TemperatureTest(output, summary, PowerUnitID = 1, Vset=125, saveToFile = Fal
     Taux1last      = 0 
     Taux2last      = 0 
     Triggered      = False   
-    LUinitialstate = GetPowerLatchStatus(PowerUnitID)
-    passed         = (LUinitialstate == 0b1111111111111111)
     TboardfirstSamples = [ReadRTD(PowerUnitID, boardSensorID) for x in range(10)]
     Taux1firstSamples  = [ReadRTD(PowerUnitID, aux1SensorID) for x in range(10)]
     Taux2firstSamples  = [ReadRTD(PowerUnitID, aux2SensorID) for x in range(10)]
+    print TboardfirstSamples
+    print Taux1firstSamples
+    print Taux2firstSamples
     Tboardfirst = sum(TboardfirstSamples)/10.
+    TboardfirstSamples = CleanChauvenet(TboardfirstSamples, Tboardfirst)
     TboardfirstRms = sqrt(sum([(x - Tboardfirst)**2 for x in TboardfirstSamples])/10.)
     Taux1first  = sum(Taux1firstSamples)/10.
+    Taux1firstSamples = CleanChauvenet(Taux1firstSamples, Taux1first)
     Taux1firstRms = sqrt(sum([(x - Taux1first)**2 for x in Taux1firstSamples])/10.)
     Taux2first  = sum(Taux2firstSamples)/10.
+    Taux2firstSamples = CleanChauvenet(Taux2firstSamples, Taux2first)
     Taux2firstRms = sqrt(sum([(x - Taux2first)**2 for x in Taux2firstSamples])/10.)
+
     print " " 
     print "Temperature RMS values: " + str([TboardfirstRms, Taux1firstRms, Taux2firstRms])
 
+    # Lowering thresholds to latch enabled channels, raising threshold
+    LowerThresholdsToMin(PowerUnitID) 
+    time.sleep(0.5)
+    RaiseThresholdsToMax(PowerUnitID) #to avoid latching
+    UnlatchPowerAll(PowerUnitID)   # Unlatch all channels
+    time.sleep(0.5)
+    LUinitialstate = GetPowerLatchStatus(PowerUnitID)
+    passed         = (LUinitialstate == 0b1111111111111111)
+
     print ' '
     print 'Printing results:' 
-    print "Vavg[V]      Itot[A]     Tboard[C]     Taux1[C]     Taux2[C]     LUstate"
+    print "Vavg[V]      Itot[A]     Tboard[C]     Taux1[C]     Taux2[C]     LUstate              Timestamp"
     while not Triggered:
         Tboard = ReadRTD(PowerUnitID, boardSensorID)
         Taux1  = ReadRTD(PowerUnitID, aux1SensorID)
@@ -67,7 +86,7 @@ def TemperatureTest(output, summary, PowerUnitID = 1, Vset=125, saveToFile = Fal
             Triggered  = True
 	    Tboardlast = Tboard
             
-        line = "%8.5f %11.5f %12.5f %13.5f %12.5f %21s" % (Vavg, Itot, Tboard, Taux1, Taux2, str(bin(LUstate)) )
+        line = "%8.5f %11.5f %12.5f %13.5f %12.5f %21s %24s" % (Vavg, Itot, Tboard, Taux1, Taux2, str(bin(LUstate)), str(datetime.now().strftime("%Y%m%dT%H%M%S%f")))
         print line
         with open(output,"ab") as f:
             f.write(str(line) + "\n")
@@ -82,7 +101,7 @@ def TemperatureTest(output, summary, PowerUnitID = 1, Vset=125, saveToFile = Fal
     passed = passed and (Tboardlast > 60.) and (Tboardlast < 70.) 
     if abs(Tboardfirst - 25.) > 5.:
         passed = False
-    if abs(Taux1first - 30.) > 5. or (Taux2first - 30.) > 5.:
+    if abs(Taux1first - 28.) > 5. or (Taux2first - 28.) > 5.:
         passed = False
     if any([x > 0.1 for x in [TboardfirstRms, Taux1firstRms, Taux2firstRms]]):
         passed = False

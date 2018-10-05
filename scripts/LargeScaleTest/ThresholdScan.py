@@ -1,19 +1,19 @@
 #!/usr/bin/env python
-__author__ = "G. Contin, M.Arratia"
+__author__ = "A.Collu"
 __version__ = "2.0"
 __status__ = "Prototype"
 
 import os
 import io
 import sys
-import time
-from time import strftime, sleep
-import datetime
 import shutil
 import numpy as np
 
 import ReadConfig
 from UsefulFunctions import *
+
+import time
+from datetime import datetime
 
 def ThresholdScan(output, Vset, PowerUnitID):
     # Config params
@@ -23,7 +23,7 @@ def ThresholdScan(output, Vset, PowerUnitID):
     end   = config["ThresholdScan_end"]
     voltages  = config["ThresholdScan_Vpoints"]
 
-    header = "CH# Threshold[DAC] Vset[DAC]     V[V]     I[A]     R[ohm]     T[C]           LUstate"
+    header = "CH# Threshold[DAC] Vset[DAC]     V[V]     I[A]     R[ohm]     T[C]           LUstate          Timestamp"
     with open(output,"ab") as f:
         f.write(str(header) + "\n")
 
@@ -131,7 +131,8 @@ def ThresholdScan(output, Vset, PowerUnitID):
 		Rload[channel] = vfloat[channel]/ifloat[channel]
 
 		T = ReadRTD(PowerUnitID, 1)
-                line = "%2d %10d %9d %13.4f %9.4f %8.4f %10.4f %022s" % (channel, itrigger, Vset, vfloat[channel], ifloat[channel], Rload[channel], T, format(int(LUstate), '#016b'))
+                line = "%2d %10d %9d %13.4f %9.4f %8.4f %10.4f %022s %24s" \
+                       % (channel, itrigger, Vset, vfloat[channel], ifloat[channel], Rload[channel], T, format(int(LUstate), '#016b'), str(datetime.now().strftime("%Y%m%dT%H%M%S%f")))
                 with open(output,"ab") as f:
 		    f.write(str(line) + "\n")
 	    

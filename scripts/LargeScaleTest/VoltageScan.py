@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-__author__ = "M.Arratia"
+__author__ = "A.Collu"
 __version__ = "2.0"
 __status__ = "Prototype"
 
@@ -7,7 +7,8 @@ import numpy as np
 
 from UsefulFunctions import *
 import ReadConfig
-
+import time
+from datetime import datetime
 
 def PowerVoltageScan(output, load, PowerUnitID):
     # Config params
@@ -17,7 +18,7 @@ def PowerVoltageScan(output, load, PowerUnitID):
     end      = config["PowerScan_end"]
     Nsamples = config["PowerScan_nsamples"]
 
-    header   = "CH# Vset[DAC]   V[V]    dVRMS[mV] dVpp[mV]    I[A]  dIRMS[mA] dIpp[mA]   R[ohm]   T[C]   State" 
+    header   = "CH# Vset[DAC]   V[V]    dVRMS[mV] dVpp[mV]    I[A]  dIRMS[mA] dIpp[mA]   R[ohm]   T[C]   State                Timestamp" 
     with open(output,"ab") as f:
         f.write(str(header) + "\n")
 
@@ -60,7 +61,7 @@ def PowerVoltageScan(output, load, PowerUnitID):
             
         T = ReadRTD(PowerUnitID, 1)
         print "Printing results:"
-        print "CH# Vset[DAC]   V[V]    dVRMS[mV] dVpp[mV]    I[A]  dIRMS[mA] dIpp[mA]   R[ohm]   T[C]   State" 
+        print "CH# Vset[DAC]   V[V]    dVRMS[mV] dVpp[mV]    I[A]  dIRMS[mA] dIpp[mA]   R[ohm]   T[C]   State                 Timestamp" 
         for ch in range(16): #loop over 
 	    Ipoints = np.array([x[ch] for x in Imatrix])
 	    Vpoints = np.array([x[ch] for x in Vmatrix])
@@ -72,8 +73,8 @@ def PowerVoltageScan(output, load, PowerUnitID):
 	    DeltaV  = 1000*(Vpoints.max()-Vpoints.min())
 	    rload   = -666
 	    if(Iread > 0.): rload = Vread/Iread
-            line = "%2d %7d %10.4f %8.1f %9.1f %10.4f %8.1f %6.1f %11.3f %6.1f %20s" % (ch, voltage, Vread, VRMS, DeltaV, Iread, IRMS, DeltaI, rload, T, str(bin(LUstate)))
-        
+            line = "%2d %7d %10.4f %8.1f %9.1f %10.4f %8.1f %6.1f %11.3f %6.1f %20s %24s" \
+                   % (ch, voltage, Vread, VRMS, DeltaV, Iread, IRMS, DeltaI, rload, T, str(bin(LUstate)), str(datetime.now().strftime("%Y%m%dT%H%M%S%f")))
             print line
             with open(output,"ab") as f:
                 f.write(str(line) + "\n")
@@ -85,15 +86,14 @@ def PowerVoltageScan(output, load, PowerUnitID):
 
     CloseFtdi() # Ends communication with RDO board
 
-def BiasVoltageScan(output, load, PowerUnitID):
+def BiasVoltageScan(output, load, PowerUnitID, testType = "standard"):
     # Config params
     config = ReadConfig.GetMostRecentConfig('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationConfig/')
     step = config["BiasScan_Vstep"]
     start = config["BiasScan_start"]
     end = config["BiasScan_end"]
     Nsamples = config["BiasScan_nsamples"]
-
-    header = "Vset[DAC]   V[V]      dVRMS[mV]   dVpp[mV]   I[A]     dIRMS[A]   dIpp[mA]   R[ohm]   T[C]     State"
+    header = "Vset[DAC]   V[V]      dVRMS[mV]   dVpp[mV]   I[A]     dIRMS[mA]   dIpp[mA]   R[ohm]   T[C]     State      Timestamp"
     with open(output,"ab") as f:
         f.write(str(header) + "\n")
 
@@ -106,17 +106,21 @@ def BiasVoltageScan(output, load, PowerUnitID):
     print 'Setting Bias Voltage ' 
     SetBiasVoltage(0,PowerUnitID)
     biasMask = 0
-    if (load == "Low"):
+    if (testType == "calibration"):
+        biasMask = 0x0
+    elif (load == "Low"):
         biasMask = 0x7
+    elif (load == "High"):
+        biasMask = 0x9
     else:
         biasMask = 0xF
     UnlatchBiasWithMask(biasMask, PowerUnitID)
-
+                                    
     ConfigureBiasADC(PowerUnitID) # this is necessary to be able to read ADCs
     time.sleep(0.2)
     print " "
     print "Scanning voltages and printing results:"
-    print "Vset[DAC]   V[V]      dVRMS[V]   dVpp[mV]   I[A]     dIRMS[mA]   dIpp[mA]   R[ohm]   T[C]     State"
+    print "Vset[DAC]   V[V]      dVRMS[mV]   dVpp[mV]   I[A]     dIRMS[mA]   dIpp[mA]   R[ohm]   T[C]     State      Timestamp"
     for voltage in range(start, end , -1*step):
         SetBiasVoltage(voltage, PowerUnitID)
         time.sleep(0.2)
@@ -139,7 +143,8 @@ def BiasVoltageScan(output, load, PowerUnitID):
 
         T = ReadRTD(PowerUnitID, 1)
         state = bin(0xFF - int(GetBiasLatchStatus(PowerUnitID), 2)) # bitwise not because all bits are active low
-        line = "%5d %12.4f %8.1f %10.1f %11.4f %7.1f %11.1f %9.1f %7.1f %9s" % (voltage, Vread, VRMS, DeltaV, Iread, IRMS, DeltaI, abs(rload), T, state)
+        line = "%5d %12.4f %9.2f %11.2f %11.6f %9.3f %9.3f %9.3f %9.3f %9s %24s" \
+               % (voltage, Vread, VRMS, DeltaV, Iread, IRMS, DeltaI, abs(rload), T, state, str(datetime.now().strftime("%Y%m%dT%H%M%S%f")))
         print line
 
         with open(output,"ab") as f:

@@ -13,10 +13,10 @@ from SummaryMethods import AppendBiasToSummaryFile
 from SummaryMethods import AppendPowerToSummaryFile
 
 columns = {}
-columns["ThresholdScan"]   = ["ChannelNumber", "ThDAC", "VsetDAC", "V", "I", "R", "T", "LUState"]
-columns["VoltageScan"]     = ["ChannelNumber", "VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState"]
-columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState"]
-columns["TemperatureTest"] = ["Vavg", "Itot", "TBoard", "TAux1", "TAux2"]
+columns["ThresholdScan"]   = ["ChannelNumber", "ThDAC", "VsetDAC", "V", "I", "R", "T", "LUState", "Timestamp"]
+columns["VoltageScan"]     = ["ChannelNumber", "VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState", "Timestamp"]
+columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState", "Timestamp"]
+columns["TemperatureTest"] = ["Vavg", "Itot", "TBoard", "TAux1", "TAux2", "Timestamp"]
 columns["LatchTest"]       = ["ChannelNumber", "BeforeEnabling", "AfterEnabling", "AfterLatching"]
 columns["TestInfo"]        = ["BoardNumber", "BoardVersion", "TestNumber", "LoadType", "PowerUnit", "Config", "Tester", "Timestamp"]
 
@@ -597,7 +597,6 @@ class BiasScan(Scan):
         self.igraph = igraph
         dvgraph = ROOT.TGraph(len(dac), dac, dv)
         digraph = ROOT.TGraph(len(dac), dac, di)
-        print iint
 
         if saveToFile:
             AppendBiasToSummaryFile(self.summary, self.PowerUnitID, self.load, vlower, vupper, vint, vslope, iint, islope)

@@ -41,7 +41,7 @@ import ReadParams
 
 #params = ReadParams.GetMostRecentParams('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationParams/')
 
-tsMode = 'disabled' # Throubleshooting mode
+tsMode = 'normal' # Throubleshooting mode
 
 class StopTest(Exception):
     pass
@@ -161,6 +161,16 @@ class Application(tk.Frame):
                 if loadType == "High":
                     pbtestingStatus[2] = pbtestingStatus[2] and FileHandler.CheckSummaryFile(boardId)
             return pbtestingStatus
+ 
+        def GetPowerBoardHighestTestedLoad(boardId):
+            pbStatus = GetPowerBoardTestingStatus(boardId)
+            for i in len(pbStatus):
+                if pbStatus[i] == 0:
+                    if i == 0:
+                        return None
+                    else:
+                        return ["Low", "Nominal"][i - 1]
+            return "High"
 
         def SetPbtestingStatusFields(pbtestingStatus):
             if pbtestingStatus[0]:
@@ -260,9 +270,10 @@ class Application(tk.Frame):
             except:
                 print "Power Unit " + PowerUnitID + " 3.3V power supply not found"
 
-        def PowerCycleBias(voltage = 5.0):
+        def PowerCycleBias(voltage = 5.):
             try:
             	self.biasPs.SetOutputOff() 
+                time.sleep(1.)
             	self.biasPs.SetVoltage(voltage)
             	self.biasPs.SetCurrentUpperLimit(10)
             	self.biasPs.SetOutputOn()
@@ -314,7 +325,7 @@ class Application(tk.Frame):
             bk_voltage = float(self.biasPs.GetVoltage())
             bk_current = float(self.biasPs.GetCurrent())
             bk_mode    = self.biasPs.GetMode()
-            if (bk_mode != "CV" or  bk_voltage < 4.99 or bk_voltage > 5.01 or bk_current > 0.025 or bk_current < 0.015):
+            if (bk_mode != "CV" or  bk_voltage < 4.99 or bk_voltage > 5.01 or bk_current > 0.105 or bk_current < 0.095):
                 print "Error: Bias Status is wrong" 
                 return False
             return True
@@ -471,6 +482,28 @@ class Application(tk.Frame):
 
             return passed
 
+        def RunBiasCalibration(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile = False, PowerUnitID = self.PowerUnitID):
+            if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
+                return
+
+            os.system('clear')
+            print "========================================================================================="
+            print "                 Starting Bias Calibration on Power Unit %s ........." %(PowerUnitID)
+            print "========================================================================================="
+            print " "
+            print " "
+
+            temporaryFile = "JUNK/BiasCalibration_PowerUnit%s.dat" %(PowerUnitID)
+            if os.path.exists(temporaryFile): os.remove(temporaryFile)
+
+            BiasVoltageScan(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID], "calibration")
+
+            print " "
+            print " "
+            print "========================================================================================="
+            print "                        Bias calibration ended."
+            print "========================================================================================="
+
         def RunPowerVoltageScan(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False, PowerUnitID = self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
             CleanTestReportEntry(PowerUnitID)
@@ -505,6 +538,28 @@ class Application(tk.Frame):
             print "========================================================================================="
 
             return passed
+
+        def RunPowerCalibration(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False, PowerUnitID = self.PowerUnitID):
+            if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
+                return
+
+            os.system('clear')
+            print "========================================================================================="
+            print "               Starting Power Voltage Scan on Power Unit %s ........." %(PowerUnitID)
+            print "========================================================================================="
+            print " "
+            print " "
+
+            temporaryFile = "JUNK/VoltageCalibration_PowerUnit%s.dat" %(PowerUnitID)
+            if os.path.exists(temporaryFile): os.remove(temporaryFile)
+
+            PowerVoltageScan(temporaryFile, load.get(), PowerBoardIdIndexDict[PowerUnitID])
+
+            print " "
+            print " "
+            print "========================================================================================="
+            print "                       Power Scan test ended."
+            print "========================================================================================="
 
         def RunThresholdScan(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False, PowerUnitID = self.PowerUnitID):
             ResetReportFieldTitle(PowerUnitID)
@@ -584,12 +639,12 @@ class Application(tk.Frame):
 
         def CreateSummaryFile():
             listOfFilesInFolder = os.listdir("./JUNK/") 
-            listOfSummaryFiles = [x for x in listOfFilesInFolder if x.split("_")[0] == "summary"]
+            listOfSummaryFiles = [("./JUNK/" + x) for x in listOfFilesInFolder if x.split("_")[0] == "summary"]
             if len(listOfSummaryFiles) != 3:
                 print "Number of summary files is wrong"
 	    summaryPartial = ['./JUNK/summary_Low.txt', './JUNK/summary_Nominal.txt', './JUNK/summary_High.txt']
-            for load in summaryPartial:
-                if "summary_" + load + ".txt" not in listOfSummaryFiles:
+            for loadFile in summaryPartial:
+                if loadFile not in listOfSummaryFiles:
                     print "Summary file does not exist" 
 
             summary = "./RESULTS/PB-" + str(self.BoardID).zfill(4) + "_summary_" + str(time.strftime("%Y%m%dT%H%M%S")) + ".txt"
@@ -600,10 +655,14 @@ class Application(tk.Frame):
 		        for line in infile:
 			    outfile.write(line)
 
-        def DeleteAllTemporaryFiles(doit = False):
+        def DeleteAllTemporaryFiles(doit = False, excludePrescans = False):
                 if not doit:
                     return        
-                testList = ["LatchTest", "TemperatureTest", "BiasScan", "VoltageScan", "ThresholdScan"]
+                testList = []
+                if not excludePrescans:
+                    testList = ["LatchTest", "TemperatureTest", "BiasCalibration", "BiasScan", "VoltageScan", "ThresholdScan"]
+                else:
+                    testList = ["BiasCalibration", "BiasScan", "VoltageScan", "ThresholdScan"]
                 puList = ["Right", "Left"]
                 # Delete temporary datafiles
                 for test in testList:
@@ -613,12 +672,22 @@ class Application(tk.Frame):
 			    os.remove(temporaryFile)
                         except:
                             pass
-                # Delete temporary (partial, for the selected load) summary file    
-                temporaryFile = "./JUNK/summary_" + load.get() + ".txt"
-                try:
-                    os.remove(temporaryFile) 
-                except:
-                    pass
+                if not excludePrescans:
+                    # Delete temporary (partial, for the selected load) summary file    
+                    temporaryFile = "./JUNK/summary_" + load.get() + ".txt"
+                    try:
+                        os.remove(temporaryFile) 
+                    except:
+                        pass
+
+        def TestRunAlready(load):
+            if load == "Low" and lowEntry['bg'] == 'green':
+                return True
+            if load == "Nominal" and nominalEntry['bg'] == 'green':
+                return True
+            if load == "High" and highEntry['bg'] == 'green':
+                return True
+            return False
 
         def RunPrescans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False):
             ResetReportFieldTitle('Both')
@@ -626,8 +695,12 @@ class Application(tk.Frame):
             DeleteAllTemporaryFiles(doit = True)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
+            if TestRunAlready(load.get()):
+                print "This power board has already been characterized with the selected load. Please delete the results before running any tests"
+                return
+	    root.update()
             self.summaryFile = CreateSummaryFileForSpecificLoad(load.get()) # Load is always Low in this function
-	    PrescansButton.config(state = 'disabled')
+	    RunPrescansButton.config(state = 'disabled')
 	    passed      = {"Right": False, "Left": False}
 	    testResults = {"Right": 0, "Left": 0}
 	    PowerUnitIDs = ['Right', 'Left']
@@ -652,11 +725,13 @@ class Application(tk.Frame):
        	        ResetReportFieldTitle(PowerUnitID)
 	        CleanTestReportEntry(PowerUnitID)
 	        messageBuffer = []
-		messageBuffer, passed[PowerUnitID] = SummaryOfResults(126, testResults[PowerUnitID])
+		messageBuffer, passed[PowerUnitID] = SummaryOfResults(70, testResults[PowerUnitID])
 	        PrintSummaryInGui(PowerUnitID, messageBuffer)
 	        UpdateReportFieldTitle(PowerUnitID, passed[PowerUnitID])
 	    if passed["Right"] and passed["Left"]:
                 RunPrescansButton['bg'] = 'green'
+            else:
+                RunPrescansButton.config(state = 'normal')
 	    RunAllTestsButton.config(state="normal")
 	    TurnOffPower("Both")
 	    TurnOffBias()
@@ -665,9 +740,15 @@ class Application(tk.Frame):
         def RunAllScans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False):
             ResetReportFieldTitle('Both')
             CleanTestReportEntry('Both')
-            DeleteAllTemporaryFiles(doit = True)
-	    if not CheckMainParameters() or not CheckRDOConfigAndCommDone() or not (CheckPrescansDone() and load.get() == "Low"):
+            if load.get() == "Low":
+                DeleteAllTemporaryFiles(doit = True, excludePrescans = True)
+            else:
+                DeleteAllTemporaryFiles(doit = True)
+	    if not CheckMainParameters() or not CheckRDOConfigAndCommDone() or not CheckPrescansDone():
 	        return
+            if TestRunAlready(load.get()):
+                print "This power board has already been characterized with the selected load. Please delete the results before running any tests"
+                return
 	    root.update()
 	    RunAllTestsButton.config(state = 'disabled')
 	    passed      = {"Right": False, "Left": False}
@@ -676,7 +757,7 @@ class Application(tk.Frame):
 	    # Running characterization tests
 	    PowerCycleBias()
 	    PowerCyclePower("Both") 
-	    if load.Get() != "Low":
+	    if load.get() != "Low":
 	        self.summaryFile = CreateSummaryFileForSpecificLoad(load.get())
 	    for PowerUnitID in PowerUnitIDs:
 	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 3)
@@ -689,12 +770,21 @@ class Application(tk.Frame):
 	        CleanTestReportEntry(PowerUnitID)
 	        messageBuffer = []
 	        if (load.get() == "Low"):
-		    messageBuffer, passed[PowerUnitID] = SummaryOfResults(126, testResults[PowerUnitID])
+		    messageBuffer, passed[PowerUnitID] = SummaryOfResults(56, testResults[PowerUnitID])
 	        else:
 		    messageBuffer, passed[PowerUnitID] = SummaryOfResults(56, testResults[PowerUnitID])
 	        PrintSummaryInGui(PowerUnitID, messageBuffer)
 	        UpdateReportFieldTitle(PowerUnitID, passed[PowerUnitID])
 	    if passed["Right"] and passed["Left"]:
+                # Calibration scan for power 
+                if load.get() == "High":
+                    tkMessageBox.showinfo("Unconnect loads", "The GUI will now run some calibration scans, please unconnect the loads from the Power Board")
+	            for PowerUnitID in PowerUnitIDs:
+	                RunPowerCalibration(timestamp, saveToFile, PowerUnitID)
+                    # Calibration scan for bias
+	            for PowerUnitID in PowerUnitIDs:
+	                RunBiasCalibration(timestamp, saveToFile, PowerUnitID)
+                # Copy all files and write summary
 	        WriteDataFiles()
 	        if load.get() == "High":
 		    CreateSummaryFile()
@@ -778,7 +868,7 @@ class Application(tk.Frame):
             return True
 
         def CheckPrescansDone():
-            if (RunPrescansButton['bg'] != 'green'):
+            if (RunPrescansButton['bg'] != 'green' and load.get() == "Low"):
                 tkMessageBox.showinfo("Prescans not run", "Please run the prescans before running the scans")
                 return False
             return True 
@@ -823,6 +913,13 @@ class Application(tk.Frame):
             puList   = ["Right", "Left"]
             if load.get()     == "Low":
                 testList = ["LatchTest", "TemperatureTest"]
+                for test in testList :
+                    for powerUnit in puList:
+                        temporaryFile = "./JUNK/" + test + "_PowerUnit" + powerUnit + ".dat"
+                        outputFile = buildOutputFilename(timestamp, test, powerUnit)
+                        subprocess.call(['/bin/bash', "-c", "cp %s %s" %(temporaryFile, outputFile)])
+            if load.get()     == "High":
+                testList = ["VoltageCalibration", "BiasCalibration"]
                 for test in testList :
                     for powerUnit in puList:
                         temporaryFile = "./JUNK/" + test + "_PowerUnit" + powerUnit + ".dat"
@@ -936,16 +1033,20 @@ class Application(tk.Frame):
 
         ######################################################
 
-        def DeleteAllBoardFiles():
-            if not tkMessageBox.askyesno("Delete all board files", "Do you want to delete all files for the selected board?"): 
+        def DeleteDataFiles():
+            if not tkMessageBox.askyesno("Delete board files", "Do you want to delete characterization files for the selected board?"): 
                 return 
-            if not tkMessageBox.askyesno("Delete all board files", "Are you really sure that you want to delete all files for this board?"): 
+            if not tkMessageBox.askyesno("Delete board files", "Are you really sure that you want to delete characterization files for this board?"): 
                 return 
-            if not tkMessageBox.askyesno("Delete all board files", "100% sure?"): 
-                return 
-            FileHandler.DeleteBoardFiles(GetBoardID())
+            if tkMessageBox.askyesno("Delete board files", "Press OK to delete all board file, no to delete only the ones corresponding to the highest tested load"): 
+                FileHandler.DeleteBoardFiles(self.BoardID)
+            else:
+                highestLoad = GetPowerBoardHighestTestedLoad(self.BoardID)
+                if highestLoad == None:
+                    return
+                FileHandler.DeleteLoadFiles(highestLoad)
             UnlockBoardID()
-        clearResultsButton = tk.Button(self, text="Clear previous results", command = DeleteAllBoardFiles, state = "disabled")
+        clearResultsButton = tk.Button(self, text="Clear previous results", command = DeleteDataFiles, state = "disabled")
         clearResultsButton.grid(row = 7, column = 1, columnspan = 2, sticky = 'nsew')
   
         ################################################################################################

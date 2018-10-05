@@ -190,7 +190,7 @@ def ReadBiasADC(PowerUnitID):
         ADCValue = ReadFromDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, NumOfBytesToRead)
         Array.append( ((ADCValue[0]>>4)/4096.)*2.56 )
   
-    I = Array[0] 
+    I = Array[0] / 10.
     V = Array[2]*(-2.)
     return I,V
 
