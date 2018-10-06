@@ -248,10 +248,10 @@ class Application(tk.Frame):
             tdk_id = tdk_mapping[PowerUnitID]
             try:
             	set_status_TDK(tdk_id, "OFF")
-            	time.sleep(0.1)
+            	time.sleep(0.2)
             	set_volt_TDK(tdk_id, 3.3)
             	set_status_TDK(tdk_id, "ON")
-            	time.sleep(0.1)
+            	time.sleep(0.2)
             	switchcontrol_TDK(tdk_id, "LOC")
                 return True
             except:
@@ -273,10 +273,11 @@ class Application(tk.Frame):
         def PowerCycleBias(voltage = 5.):
             try:
             	self.biasPs.SetOutputOff() 
-                time.sleep(1.)
+                time.sleep(1.5)
             	self.biasPs.SetVoltage(voltage)
             	self.biasPs.SetCurrentUpperLimit(10)
             	self.biasPs.SetOutputOn()
+                time.sleep(1.5)
                 return True
 	    except:
                 print "Attempt to power cycle bias failed"
@@ -325,7 +326,7 @@ class Application(tk.Frame):
             bk_voltage = float(self.biasPs.GetVoltage())
             bk_current = float(self.biasPs.GetCurrent())
             bk_mode    = self.biasPs.GetMode()
-            if (bk_mode != "CV" or  bk_voltage < 4.99 or bk_voltage > 5.01 or bk_current > 0.105 or bk_current < 0.095):
+            if (bk_mode != "CV" or  bk_voltage < 4.99 or bk_voltage > 5.01 or bk_current > 0.115 or bk_current < 0.085):
                 print "Error: Bias Status is wrong" 
                 return False
             return True
@@ -713,14 +714,29 @@ class Application(tk.Frame):
 		PowerCyclePower(PowerUnitID)
 		testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunOverTprotectionScan(timestamp, saveToFile, PowerUnitID)) << 6)
 		tkMessageBox.showwarning( "Info", "Power Unit %s will be power cycled." %(PowerUnitID), icon="info")
+                if (testResults[PowerUnitID] >> 6 & 0x1) == 0x0:
+                    RunPrescansButton.config(state = 'normal')
+	            TurnOffPower("Both")
+	            TurnOffBias()
+                    return
 	    for PowerUnitID in PowerUnitIDs:
 		PowerCycleBias()
 		PowerCyclePower(PowerUnitID)
 		testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunI2CTest(saveToFile, PowerUnitID)) << 1)
+                if (testResults[PowerUnitID] >> 1 & 0x1) == 0x0:
+                    RunPrescansButton.config(state = 'normal')
+	            TurnOffPower("Both")
+	            TurnOffBias()
+                    return
 	    for PowerUnitID in PowerUnitIDs:
 		PowerCycleBias()
 		PowerCyclePower(PowerUnitID)
 		testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunLatchTest(timestamp, saveToFile, PowerUnitID)) << 2)
+                if (testResults[PowerUnitID] >> 2 & 0x1) == 0x0:
+                    RunPrescansButton.config(state = 'normal')
+	            TurnOffPower("Both")
+	            TurnOffBias()
+                    return
             for PowerUnitID in PowerUnitIDs:
        	        ResetReportFieldTitle(PowerUnitID)
 	        CleanTestReportEntry(PowerUnitID)
@@ -761,10 +777,25 @@ class Application(tk.Frame):
 	        self.summaryFile = CreateSummaryFileForSpecificLoad(load.get())
 	    for PowerUnitID in PowerUnitIDs:
 	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 3)
+                if (testResults[PowerUnitID] >> 3 & 0x1) == 0x0:
+	            RunAllTestsButton.config(state="normal")
+	            TurnOffPower("Both")
+	            TurnOffBias()
+                    return passed
 	    for PowerUnitID in PowerUnitIDs:
 	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 4)
+                if (testResults[PowerUnitID] >> 4 & 0x1) == 0x0:
+	            RunAllTestsButton.config(state="normal")
+	            TurnOffPower("Both")
+	            TurnOffBias()
+                    return passed
 	    for PowerUnitID in PowerUnitIDs:
 	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunThresholdScan(timestamp, saveToFile, PowerUnitID))    << 5)
+                if (testResults[PowerUnitID] >> 5 & 0x1) == 0x0:
+	            RunAllTestsButton.config(state="normal")
+	            TurnOffPower("Both")
+	            TurnOffBias()
+                    return passed
 	    for PowerUnitID in PowerUnitIDs:
 	        ResetReportFieldTitle(PowerUnitID)
 	        CleanTestReportEntry(PowerUnitID)

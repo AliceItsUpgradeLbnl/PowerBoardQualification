@@ -48,7 +48,7 @@ def PowerVoltageScan(output, load, PowerUnitID):
         print ' '
 	print 'Setting voltage of all channels to %f [V]' %(voltage)
         SetPowerVoltageAll(voltage, PowerUnitID)
-        time.sleep(0.2)
+        time.sleep(0.5)
         LUstate = GetPowerLatchStatus(PowerUnitID)
         if LUstate == 0x00: break
         Imatrix = np.zeros((Nsamples,16))

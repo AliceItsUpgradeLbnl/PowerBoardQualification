@@ -234,8 +234,9 @@ def LatchTest(output, load, PowerUnitID):
             print "Bias channel states are wrong!"            
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not ((currentLimit < 0.105 and currentLimit > 0.075) and (voltage < -1.5 and voltage > -2.0)):
-            print "Current limit outside boundaries (75mA - 105mA) or voltage outside boundaries (-3.0, -2.0)"            
+        elif not ((currentLimit < 0.105 and currentLimit > 0.075) and (voltage < -1.5 and voltage > -2.5)):
+            print "Current limit outside boundaries (75mA - 105mA) or voltage outside boundaries (-1.5, -2.5)"            
+            print currentLimit, offset
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
         elif not ((abs(finalCurrent - idleCurrent) < 0.0001) and ((abs(voltage)/currentLimit) - 28.)/28. < 0.1) :
