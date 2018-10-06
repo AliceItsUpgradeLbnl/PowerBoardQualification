@@ -3,14 +3,14 @@
 import Statistics as st
 import os
 
-resultsFolder = "/home/its/Desktop/powerboard_8channel_tests/PB_8-channel/scripts/TXTFILES/"
+resultsFolder = "/home/its/Desktop/PB-production/PB-production/scripts/RESULTS/"
 
 def BiasScanAnalysis():
     dictOfBiasScanFiles  = GetBiasResultFiles()
     numberOfTestedBoards = len(dictOfBiasScanFiles)
     for PowerBoardID in dictOfBiasScanFiles: 
-        if not PowerBoardID == str(9):
-            continue
+        #if not PowerBoardID == str(6):
+        #    continue
         print "PowerBoardID " + str(PowerBoardID)
 	for PowerUnitID in dictOfBiasScanFiles[PowerBoardID]:
             print "PowerUnitID " + str(PowerUnitID)
@@ -19,21 +19,25 @@ def BiasScanAnalysis():
 		bsData.readFile(resultsFolder + dictOfBiasScanFiles[PowerBoardID][PowerUnitID][Load])
 		vint, vslope, iint, islope = bsData.visualizeAndCheck()
 		dictOfBiasScanFiles[PowerBoardID][PowerUnitID][Load] = iint
-                if Load == "1":
+                if Load == "Nominal":
                     print "Offset " + str(iint)
             
+        if dictOfBiasScanFiles[PowerBoardID]["Right"]["Nominal"] > -0.0075 and dictOfBiasScanFiles[PowerBoardID]["Left"]["Nominal"] > -0.0075:
+	    print "Grade for this power board is: Inner Layers grade"
+        else:
+            print "Grade for this power board is: Outer Layers grade"
 
 
 def GetBiasResultFiles():
-   PowerUnitIDCollectables = ["1", "2"]
-   LoadCollectables = ["1", "2", "3"]
-   txtFiles = [x for x in os.listdir(resultsFolder) if x.split(".")[-1] == "txt"]
-   biasFiles = [x for x in txtFiles if x.split("_")[6] == "BiasVoltageScan"] 
+   PowerUnitIDCollectables = ["Right", "Left"]
+   LoadCollectables = ["Low", "Nominal", "High"]
+   datFiles = [x for x in os.listdir(resultsFolder) if x.split(".")[-1] == "dat"]
+   biasFiles = [x for x in datFiles if x.split("_")[3] == "BiasScan"] 
    boardFiles = {}
    for x in biasFiles:
-       PowerBoardID = x.split("_")[1].split("ID")[1]
-       PowerUnitID  = x.split("_")[3].split("ID")[1]
-       Load         = x.split("_")[4].split("Type")[1]
+       PowerBoardID = int(x.split("_")[0].split("-")[1])
+       PowerUnitID  = x.split("_")[1].split("-")[1]
+       Load         = x.split("_")[2].split("-")[1]
        if PowerBoardID not in boardFiles:
            boardFiles[PowerBoardID] = {}
        if PowerUnitID not in boardFiles[PowerBoardID]:

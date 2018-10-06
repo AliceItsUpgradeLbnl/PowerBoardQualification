@@ -627,25 +627,32 @@ class Application(tk.Frame):
 
             return passed
 
-        def RemoveSummaryFileForSpecificLoad(load):
+        def RemoveSummaryFileForSpecificLoad(load, isPrescans = False):
             listOfFilesInFolder = os.listdir("./JUNK/") 
             listOfSummaryFiles = [x for x in listOfFilesInFolder if x.split("_")[0] == "summary"]
-            listOfSummaryFilesForSpecificLoad = [x for x in listOfSummaryFiles if x.split("_")[1] == load]
+            listOfSummaryFilesForSpecificLoad = []
+            if isPrescans:
+                listOfSummaryFilesForSpecificLoad = [x for x in listOfSummaryFiles if x.split("_")[1] == "Prescans"]
+            else:
+                listOfSummaryFilesForSpecificLoad = [x for x in listOfSummaryFiles if x.split("_")[1] == load]
             for summaryFile in listOfSummaryFilesForSpecificLoad:
                 os.remove("./JUNK/" + summaryFile)
 
-        def CreateSummaryFileForSpecificLoad(load):
-            RemoveSummaryFileForSpecificLoad(load)
-            return "./JUNK/summary_" + load + ".txt"
+        def CreateSummaryFileForSpecificLoad(load, isPrescans = False):
+            RemoveSummaryFileForSpecificLoad(load, isPrescans)
+            if isPrescans:
+            	return "./JUNK/summary_Prescans.txt"
+            else:
+            	return "./JUNK/summary_" + load + ".txt"
 
         def CreateSummaryFile():
             listOfFilesInFolder = os.listdir("./JUNK/") 
             listOfSummaryFiles = [("./JUNK/" + x) for x in listOfFilesInFolder if x.split("_")[0] == "summary"]
-            if len(listOfSummaryFiles) != 3:
+            if len(listOfSummaryFiles) != 4:
                 print "Number of summary files is wrong"
-	    summaryPartial = ['./JUNK/summary_Low.txt', './JUNK/summary_Nominal.txt', './JUNK/summary_High.txt']
-            for loadFile in summaryPartial:
-                if loadFile not in listOfSummaryFiles:
+	    summaryPartial = ['./JUNK/summary_Prescans.txt', './JUNK/summary_Low.txt', './JUNK/summary_Nominal.txt', './JUNK/summary_High.txt']
+            for summaryFile in summaryPartial:
+                if summaryFile not in listOfSummaryFiles:
                     print "Summary file does not exist" 
 
             summary = "./RESULTS/PB-" + str(self.BoardID).zfill(4) + "_summary_" + str(time.strftime("%Y%m%dT%H%M%S")) + ".txt"
@@ -656,14 +663,17 @@ class Application(tk.Frame):
 		        for line in infile:
 			    outfile.write(line)
 
-        def DeleteAllTemporaryFiles(doit = False, excludePrescans = False):
+        def DeleteAllTemporaryFiles(doit = False, isPrescans = False):
                 if not doit:
                     return        
                 testList = []
-                if not excludePrescans:
-                    testList = ["LatchTest", "TemperatureTest", "BiasCalibration", "BiasScan", "VoltageScan", "ThresholdScan"]
+                # Create a list of the temporary datafile types to delete for the selected test/load
+                if isPrescans:
+                    testList = ["LatchTest", "TemperatureTest"]
+                elif load.get() == "Low" or load.get() == "Nominal": 
+                    testList = ["BiasScan", "VoltageScan", "ThresholdScan"]
                 else:
-                    testList = ["BiasCalibration", "BiasScan", "VoltageScan", "ThresholdScan"]
+                    testList = ["BiasCalibration", "BiasScan", "VoltageCalibration", "VoltageScan", "ThresholdScan"]
                 puList = ["Right", "Left"]
                 # Delete temporary datafiles
                 for test in testList:
@@ -673,13 +683,15 @@ class Application(tk.Frame):
 			    os.remove(temporaryFile)
                         except:
                             pass
-                if not excludePrescans:
-                    # Delete temporary (partial, for the selected load) summary file    
+                # Generate the name of the temporary summary file to delete for the selected test/load
+                if isPrescans:
+                    temporaryFile = "./JUNK/summary_Prescans.txt"
+                else:
                     temporaryFile = "./JUNK/summary_" + load.get() + ".txt"
-                    try:
-                        os.remove(temporaryFile) 
-                    except:
-                        pass
+                try:
+                    os.remove(temporaryFile) 
+                except:
+                    pass
 
         def TestRunAlready(load):
             if load == "Low" and lowEntry['bg'] == 'green':
@@ -693,14 +705,14 @@ class Application(tk.Frame):
         def RunPrescans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False):
             ResetReportFieldTitle('Both')
             CleanTestReportEntry('Both')
-            DeleteAllTemporaryFiles(doit = True)
+            DeleteAllTemporaryFiles(doit = True, isPrescans = True)
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
             if TestRunAlready(load.get()):
                 print "This power board has already been characterized with the selected load. Please delete the results before running any tests"
                 return
 	    root.update()
-            self.summaryFile = CreateSummaryFileForSpecificLoad(load.get()) # Load is always Low in this function
+            self.summaryFile = CreateSummaryFileForSpecificLoad("Noload", IsPrescans = True)
 	    RunPrescansButton.config(state = 'disabled')
 	    passed      = {"Right": False, "Left": False}
 	    testResults = {"Right": 0, "Left": 0}
@@ -751,15 +763,13 @@ class Application(tk.Frame):
 	    RunAllTestsButton.config(state="normal")
 	    TurnOffPower("Both")
 	    TurnOffBias()
+            if passed["Right"] and passed["Left"]:
+                RunAllScans(timestamp=time.strftime("%Y%m%dT%H%M%S"), saveToFile=True)
             return
 
         def RunAllScans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False):
             ResetReportFieldTitle('Both')
-            CleanTestReportEntry('Both')
-            if load.get() == "Low":
-                DeleteAllTemporaryFiles(doit = True, excludePrescans = True)
-            else:
-                DeleteAllTemporaryFiles(doit = True)
+            DeleteAllTemporaryFiles(doit = True)
 	    if not CheckMainParameters() or not CheckRDOConfigAndCommDone() or not CheckPrescansDone():
 	        return
             if TestRunAlready(load.get()):

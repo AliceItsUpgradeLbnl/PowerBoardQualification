@@ -6,6 +6,21 @@ import subprocess
 
 resultsFolder = "RESULTS/"
 powerUnitIds = ["Right", "Left"]
+fileLengths = {"summary": 225, "TemperatureTest": 8, "LatchTest": 29, "BiasScan": 15, "VoltageScan": 417, "ThresholdScan": 97, "BiasCalibration": 15, "VoltageCalibration": 417}
+
+def CheckBoardIdsFilesComplete(boardIdList):
+    allComplete = True
+    for boardId in boardIdList:
+        allComplete = allComplete and CheckBoardIdFilesComplete(boardId)
+    return allComplete
+
+def CheckBoardIdFilesComplete(boardId):
+    if not CheckSummaryFile(boardId):
+        return False    
+    for load in ["Low", "Nominal", "High"]:
+        if not CheckDataFiles(boardId, load):
+            return False
+    return True
 
 def CheckDataFiles(boardId, loadType):
     testFilesExist = True 
@@ -19,9 +34,13 @@ def CheckSummaryFile(boardId):
     listOfTxtFiles = GetTxtFiles()
     listOfBoardIdFiles = GetBoardIdFiles(listOfTxtFiles, boardId)
     listOfSummaryFiles = [x for x in listOfBoardIdFiles if x.split("_")[1] == "summary"]
+    # Check that at least one and only one summary file exists for the entered power board id
     if len(listOfSummaryFiles) != 1:
         return False
-    
+    # Check that the length of the summary file for the entered power board id is of the right length
+    if GetLengthOfFileInLines(resultsFolder + listOfSummaryFiles[0] + ".txt") != fileLengths["summary"]:
+        return False
+     
     return True 
 
 def DeleteBoardFiles(boardId):
@@ -56,6 +75,9 @@ def DeleteBoardLoadDatFiles(boardId, load):
     for fileToDelete in listOfFilesToDelete:
         subprocess.call(["/bin/bash", "-c", "rm -f " + resultsFolder + fileToDelete])
 
+def GetLengthOfFileInLines(filename):
+    return sum(1 for line in open(filename))
+
 def GetListOfTestTypes(loadType):
     if loadType == 'Low':
         return ["TemperatureTest", "LatchTest", "BiasScan", "VoltageScan", "ThresholdScan"]
@@ -72,10 +94,20 @@ def CheckPowerUnitFiles(boardId, powerUnitId, loadType, listOfTestTypes):
     listOfBoardIdMatchingFiles = GetBoardIdFiles(listOfDatFiles, boardId)
     searchList     = GetLoadTypeFiles(listOfBoardIdMatchingFiles, loadType)
     listOfPowerUnitMatchingFiles = GetPowerUnitFiles(searchList, powerUnitId)
+    if len(listOfPowerUnitMatchingFiles) != len(listOfTestTypes):
+        return False
     for x in listOfTestTypes:
-        if not len(GetTestTypeFiles(listOfPowerUnitMatchingFiles, x)):
+        testFiles = GetTestTypeFiles(listOfPowerUnitMatchingFiles, x)
+        # Checking that only one test file of this type exists
+        if len(testFiles) != 1:
             return False
-
+        # Check that this type of test file is of the reight length
+        if (x != "TemperatureTest"):
+            if GetLengthOfFileInLines(resultsFolder + testFiles[0] + ".dat") != fileLengths[x]:
+                return False
+        else:
+            if GetLengthOfFileInLines(resultsFolder + testFiles[0] + ".dat") < fileLengths[x]:
+                return False
     return True
 
 def GetResultFiles():

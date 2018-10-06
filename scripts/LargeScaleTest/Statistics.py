@@ -5,10 +5,9 @@ import ROOT
 
 columns = {}
 
-columns["ThresholdScan"]   = ["ChannelNumber", "ThDAC", "VsetDAC", "V", "I", "R", "T", "LUState"]
-columns["VoltageScan"]     = ["ChannelNumber", "VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState"]
-#columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState"]
-columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T"]
+columns["ThresholdScan"]   = ["ChannelNumber", "ThDAC", "VsetDAC", "V", "I", "R", "T", "LUState", "Timestamp"]
+columns["VoltageScan"]     = ["ChannelNumber", "VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState", "Timestamp"]
+columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState", "Timestamp"]
 
 class Scan(object):
     def __init__(self, testName, hasChannelData):

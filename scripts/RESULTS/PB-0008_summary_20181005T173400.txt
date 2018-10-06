@@ -51,38 +51,6 @@ Load Type: Low
 Power Unit Right:
 Voltage lowest: -4.78
 Voltage highest: -0.00
-Voltage intercept (e-3) [V]: 5.42
-Voltage slope (e-2) [V/DAC]: -3.87
-Current intercept (e-3) [I]: -6.81
-Current slope (e-4) [I/DAC]: 5.29
- 
-Power Unit Left:
-Voltage lowest: -4.78
-Voltage highest: -0.00
-Voltage intercept (e-3) [V]: 4.62
-Voltage slope (e-2) [V/DAC]: -3.80
-Current intercept (e-3) [I]: -9.18
-Current slope (e-4) [I/DAC]: 5.21
- 
--------------------------- Summary for Bias scan -------------------------------------
- 
-Load Type: Low
- 
-Power Unit Right:
-Voltage lowest: -4.78
-Voltage highest: -0.00
-Voltage intercept (e-3) [V]: 5.94
-Voltage slope (e-2) [V/DAC]: -3.87
-Current intercept (e-3) [I]: -6.84
-Current slope (e-4) [I/DAC]: 5.29
- 
--------------------------- Summary for Bias scan -------------------------------------
- 
-Load Type: Low
- 
-Power Unit Right:
-Voltage lowest: -4.78
-Voltage highest: -0.00
 Voltage intercept (e-3) [V]: 5.53
 Voltage slope (e-2) [V/DAC]: -3.87
 Current intercept (e-3) [I]: -6.84
