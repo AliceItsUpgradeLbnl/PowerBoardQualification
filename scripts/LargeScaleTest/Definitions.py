@@ -66,9 +66,28 @@ def WriteToDevice (I2CLink, I2CAddress, *args):
         ListOfCommands.append(command)
         command = str(128<<16 | I2CLink<<7 | len(args))
         ListOfCommands.append(command)
+    elif len(args) == 4:
+        command = str(192<<16 | int(args[0])<<8 | int(I2CAddress))
+        ListOfCommands.append(command)
+        command = str(256<<16 | int(args[2])<<8 | int(args[1]))
+        ListOfCommands.append(command)
+        command = str(960<<16 | int(args[3]))
+        ListOfCommands.append(command)
+        command = str(128<<16 | 1<<11 | I2CLink<<7)
+        ListOfCommands.append(command)
+    elif len(args) == 5:
+        command = str(192<<16 | int(args[0])<<8 | int(I2CAddress))
+        ListOfCommands.append(command)
+        command = str(256<<16 | int(args[2])<<8 | int(args[1]))
+        ListOfCommands.append(command)
+        command = str(960<<16 | int(args[4])<<8 | int(args[3]))
+        ListOfCommands.append(command)
+        command = str(128<<16 | 1<<11 | I2CLink<<7 | 1)
+        ListOfCommands.append(command)
     else:
         return -1
 
+    #print [hex(int(x)) for x in ListOfCommands]
     SendPacket(ListOfCommands, DataBuffer)       
 
     return 0
@@ -333,6 +352,7 @@ def ReadADCs(DataBuffer, NumberOfSamplesPerChannel = None):
 # DataWordMask        : mask to apply to the extracted data word bytes
 # RepeatNTimes        : number of I2C packets to decode  
 def DecodeI2CData(InputDataBuffer, InputReadPointer, OutputDataBuffer, DataWordSizeInBytes, DataWordMask, RepeatNTimes):
+    #print [hex(int(x)) for x in InputDataBuffer] 
     if (InputReadPointer >= len(InputDataBuffer) - 1): # At least one header and trailer must be in the buffer
         print "Error: InputReadPointer incompatible with the length of InputDataBuffer" 
         return -1
@@ -351,7 +371,7 @@ def DecodeI2CData(InputDataBuffer, InputReadPointer, OutputDataBuffer, DataWordS
 
 
     NumDataWordsPerInputWord = 2/DataWordSizeInBytes     
-    i = 0
+    #i = 0
     NumOfI2CTransactions = RepeatNTimes
 
     while (RepeatNTimes):
@@ -370,7 +390,7 @@ def DecodeI2CData(InputDataBuffer, InputReadPointer, OutputDataBuffer, DataWordS
                 OutputDataBuffer.append( (inputWord & DataWordMask) >> int(math.log(GetNumberOfShiftsToFirstHighBit(DataWordMask), 2)) )
                 inputWord = inputWord >> DataWordSizeInBytes*8
                 j-=1
-                i+=1
+                #i+=1
             
             InputReadPointer+=1
 

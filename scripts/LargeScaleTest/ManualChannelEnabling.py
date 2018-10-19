@@ -19,7 +19,6 @@ biasPs.SetVoltage(5.0)
 biasPs.SetCurrentUpperLimit(10)
 biasPs.SetOutputOn()
 
-
 set_volt_TDK(PowerUnitID - 1, 3.3)
 set_status_TDK(PowerUnitID - 1, "ON")
 
@@ -33,13 +32,20 @@ else:
     print "Invalid test or channel"
     exit()
 
-ConfigureBiasADC(PowerUnitID)
+ConfigurePowerADC(PowerUnitID)
+#ConfigureBiasADC(PowerUnitID)
+
 try:
     while(True):
-        print ReadBiasADC(PowerUnitID)
+        if testType == "bias":
+            pass
+            #print ReadBiasADC(PowerUnitID)
+        if testType == "power":
+            pass
+            #print ReadPowerADC(PowerUnitID) 
         time.sleep(1.)
 except KeyboardInterrupt:
-    DisableBiasAll(PowerUnitID)
+    #DisableBiasAll(PowerUnitID)
     DisablePowerAll(PowerUnitID)
     CloseFtdi() 
     biasPs.SetOutputOff()

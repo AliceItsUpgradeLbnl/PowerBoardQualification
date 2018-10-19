@@ -22,8 +22,8 @@ from VoltageScan import *
 from ThresholdScan import *
 from TemperatureTest import* 
 
-from DataPlotter import PlotVoltageScanData
-from DataPlotter import PlotBiasScanData
+from DataPlotter import PlotPowerVoltageScanData
+from DataPlotter import PlotBiasVoltageScanData
 from DataPlotter import PlotThresholdScanData
 
 from SummaryMethods import *
@@ -40,7 +40,7 @@ import ReadConfig
 import ReadParams
 
 #params = ReadParams.GetMostRecentParams('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationParams/')
-
+ 
 tsMode = 'normal' # Throubleshooting mode
 
 class StopTest(Exception):
@@ -292,6 +292,8 @@ class Application(tk.Frame):
         def TurnOffAll():
             TurnOffPower("Both")
             TurnOffBias()
+            PrelTest['bg'] = "salmon"
+            CheckComm['bg']   = "salmon"
 
         def CheckPowerStatus(PowerUnitID, current = 0.25):
             if PowerUnitID == "Both":
@@ -326,7 +328,7 @@ class Application(tk.Frame):
             bk_voltage = float(self.biasPs.GetVoltage())
             bk_current = float(self.biasPs.GetCurrent())
             bk_mode    = self.biasPs.GetMode()
-            if (bk_mode != "CV" or  bk_voltage < 4.99 or bk_voltage > 5.01 or bk_current > 0.115 or bk_current < 0.085):
+            if (bk_mode != "CV" or  bk_voltage < 4.99 or bk_voltage > 5.01 or bk_current > 0.130 or bk_current < 0.07):
                 print "Error: Bias Status is wrong" 
                 return False
             return True
@@ -712,7 +714,7 @@ class Application(tk.Frame):
                 print "This power board has already been characterized with the selected load. Please delete the results before running any tests"
                 return
 	    root.update()
-            self.summaryFile = CreateSummaryFileForSpecificLoad("Noload", IsPrescans = True)
+            self.summaryFile = CreateSummaryFileForSpecificLoad("Noload", isPrescans = True)
 	    RunPrescansButton.config(state = 'disabled')
 	    passed      = {"Right": False, "Left": False}
 	    testResults = {"Right": 0, "Left": 0}
@@ -783,8 +785,7 @@ class Application(tk.Frame):
 	    # Running characterization tests
 	    PowerCycleBias()
 	    PowerCyclePower("Both") 
-	    if load.get() != "Low":
-	        self.summaryFile = CreateSummaryFileForSpecificLoad(load.get())
+	    self.summaryFile = CreateSummaryFileForSpecificLoad(load.get())
 	    for PowerUnitID in PowerUnitIDs:
 	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunBiasVoltageScan(timestamp, saveToFile, PowerUnitID))  << 3)
                 if (testResults[PowerUnitID] >> 3 & 0x1) == 0x0:
@@ -838,9 +839,9 @@ class Application(tk.Frame):
 	    TurnOffBias()
 	    if pbtestingStatus == [1, 1, 1]:
 	        UnlockBoardID()
-	        load.set('')
-	        ddownLoads['bg'] = 'salmon'
 	        CheckComm['bg'] = 'salmon'
+	    load.set('')
+	    ddownLoads['bg'] = 'salmon'
 	    return passed
 
         def UpdateReportFieldTitle(PowerUnitID, passed):
@@ -1245,17 +1246,17 @@ class Application(tk.Frame):
         ###################################################################################
 
         ########### PLOT VOLTAGE SCAN BUTTON ########################################
-        PlotVoltageScanButton = tk.Button(self, text = "Plot Power scan", command = lambda: PlotPowerVoltageScanData('JUNK/PowerVoltageScan_PowerUnitRight.txt', load.get()))
+        PlotVoltageScanButton = tk.Button(self, text = "Plot Power scan", command = lambda: PlotPowerVoltageScanData('JUNK/PowerVoltageScan_PowerUnitRight.dat', "Right", load.get()))
         PlotVoltageScanButton.grid(row = 14, column = 6, sticky = 'nsew')
         #############################################################################
 
         ########### PLOT BIAS SCAN BUTTON ###########################################
-        PlotBiasScanButton = tk.Button(self, text = "Plot Bias scan", command = lambda: PlotBiasVoltageScanData('JUNK/BiasVoltageScan_PowerUnitRight.txt', load.get()))
+        PlotBiasScanButton = tk.Button(self, text = "Plot Bias scan", command = lambda: PlotBiasVoltageScanData('JUNK/BiasVoltageScan_PowerUnitRight.dat', "Right", load.get()))
         PlotBiasScanButton.grid(row = 15, column = 6, sticky = 'nsew')
         #############################################################################
 
         ########### PLOT THRESHOLD SCAN BUTTON ######################################
-        PlotThresholdScanButton = tk.Button(self, text = "Plot Thres scan", command = lambda: PlotThresholdScanData('JUNK/ThresholdScan_PowerUnitRight.txt', load.get()))
+        PlotThresholdScanButton = tk.Button(self, text = "Plot Thres scan", command = lambda: PlotThresholdScanData('JUNK/ThresholdScan_PowerUnitRight.dat', "Right", load.get()))
         PlotThresholdScanButton.grid(row = 16, column = 6, sticky = 'nsew')
         #############################################################################
 
@@ -1267,17 +1268,17 @@ class Application(tk.Frame):
         ###################################################################################
 
         ########### PLOT VOLTAGE SCAN BUTTON ########################################
-        PlotVoltageScanButton = tk.Button(self, text = "Plot Power scan", command = lambda: PlotPowerVoltageScanData('JUNK/PowerVoltageScan_PowerUnitLeft.txt', load.get()))
+        PlotVoltageScanButton = tk.Button(self, text = "Plot Power scan", command = lambda: PlotPowerVoltageScanData('JUNK/PowerVoltageScan_PowerUnitLeft.dat', "Left", load.get()))
         PlotVoltageScanButton.grid(row = 22, column = 6, sticky = 'nsew')
         #############################################################################
 
         ########### PLOT BIAS SCAN BUTTON ###########################################
-        PlotBiasScanButton = tk.Button(self, text = "Plot Bias scan", command = lambda: PlotBiasVoltageScanData('JUNK/BiasVoltageScan_PowerUnitLeft.txt', load.get()))
+        PlotBiasScanButton = tk.Button(self, text = "Plot Bias scan", command = lambda: PlotBiasVoltageScanData('JUNK/BiasVoltageScan_PowerUnitLeft.dat', "Left", load.get()))
         PlotBiasScanButton.grid(row = 23, column = 6, sticky = 'nsew')
         #############################################################################
 
         ########### PLOT THRESHOLD SCAN BUTTON ######################################
-        PlotThresholdScanButton = tk.Button(self, text = "Plot Thres scan", command = lambda: PlotThresholdScanData('JUNK/ThresholdScan_PowerUnitLeft.txt', load.get()))
+        PlotThresholdScanButton = tk.Button(self, text = "Plot Thres scan", command = lambda: PlotThresholdScanData('JUNK/ThresholdScan_PowerUnitLeft.dat', "Left", load.get()))
         PlotThresholdScanButton.grid(row = 24, column = 6, sticky = 'nsew')
         #############################################################################
 

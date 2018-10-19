@@ -58,6 +58,7 @@ def PowerVoltageScan(output, load, PowerUnitID):
             Itemp, Vtemp, I_ADC, V_ADC = ReadPowerADC(PowerUnitID)
 	    Imatrix[n] = Itemp
 	    Vmatrix[n] = Vtemp
+         
             
         T = ReadRTD(PowerUnitID, 1)
         print "Printing results:"
@@ -78,6 +79,20 @@ def PowerVoltageScan(output, load, PowerUnitID):
             print line
             with open(output,"ab") as f:
                 f.write(str(line) + "\n")
+
+        if voltage == 100:
+            UnlatchPowerWithMask(PowerUnitID, 0x0000)
+            time.sleep(20.)
+            
+            UnlatchPowerWithMask(PowerUnitID, 0x000F)
+            time.sleep(0.2)
+            UnlatchPowerWithMask(PowerUnitID, 0x00FF)
+            time.sleep(0.2)
+            UnlatchPowerWithMask(PowerUnitID, 0x0FFF)
+            time.sleep(0.2)
+            UnlatchPowerWithMask(PowerUnitID, 0xFFFF)
+            time.sleep(0.2)
+            
 
     # Set the thresholds low to latch all unlatched channels (this should not be necessary if the board works properly), and then re-raise the thresholds for next test
     print ' '

@@ -328,6 +328,7 @@ def ConfigureRTD(PowerUnitID):
     WriteToDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, *I2CData)
     I2CData = [0x4, 0x80, 0xC2]
     WriteToDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, *I2CData)
+    time.sleep(0.2)
 
 def ReadRTDConfiguration(PowerUnitID):
     configurations = []
@@ -354,12 +355,52 @@ def ReadRTD(PowerUnitID, SensorID):
     I2CData = [0x1 << (SensorID - 1), 0x1, 0xFF]
     NumOfBytesToRead = 2
     WriteToDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, *I2CData)
-    time.sleep(0.06)
     ResistanceValue = ReadFromDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, NumOfBytesToRead)
     I2CData = [0x1 << (SensorID - 1), 0x2, 0xFF]
     WriteToDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, *I2CData)
-    time.sleep(0.06)
     ResistanceValue[0] = ((ResistanceValue[0] & 0xFF) << 7) | ((0xFF & ReadFromDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, NumOfBytesToRead)[0])>>1)
     TemperatureValue = (ResistanceValue[0] - 8192.)/31.54
+    time.sleep(0.025)
 
     return TemperatureValue
+
+def ReadRTDNew(PowerUnitID, SensorID):
+    #print "Reading from RTD..."
+    if SensorID < 1 or SensorID > 3:
+	print "Wrong SensorID provided while attempting to read from a temperature sensor"
+	sys.exit()
+
+    LinkType = BridgeTempLink
+    I2CData = [0x1 << (SensorID - 1), 0x1, 0xFF]
+    WriteToDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, *I2CData)
+    NumOfBytesToRead = 2
+    ResistanceValue = ReadFromDevice(I2CLink(PowerUnitID, LinkType), BridgeTempAddress, NumOfBytesToRead)
+    print ResistanceValue
+    ResistanceValue = (ResistanceValue[0] & 0xFF) << 7 | (ResistanceValue[0] & 0xFF00) >> 9
+    TemperatureValue = (ResistanceValue - 8192.)/31.54
+    time.sleep(0.025)
+
+    return TemperatureValue
+
+def ReadPowerADCExperimental(PowerUnitID):
+    #print "Reading the ADC channels for power..."
+
+    LinkType = ADCLink
+    NumOfBytesToRead = 2
+    V = []
+    I = []
+    V_ADC = []
+    I_ADC = []
+    for SlaveAddress in ADCAddress:
+        for channel in range(0, 8):
+            I2CData = [0x20 + channel]
+            ADCValue = ReadRSFromDevice(I2CLink(PowerUnitID, LinkType), SlaveAddress, NumOfBytesToRead, *I2CData)
+            if channel%2:
+                I.append( (((ADCValue[0]>>4)/4096.)*2.56 - 0.25)/(0.005*150) ) #*1.00294 +0.013083 )
+                I_ADC.append( (ADCValue[0]>>4)/4096.)
+            else:
+                V.append( ((ADCValue[0]>>4)/4096.)*2.56*6./5. ) # In the new power boards the dynamic range has been increased
+                V_ADC.append( (ADCValue[0]>>4)/4096. )
+
+    return I,V, I_ADC ,V_ADC
+

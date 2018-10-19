@@ -19,10 +19,10 @@ def BiasScanAnalysis():
 		bsData.readFile(resultsFolder + dictOfBiasScanFiles[PowerBoardID][PowerUnitID][Load])
 		vint, vslope, iint, islope = bsData.visualizeAndCheck()
 		dictOfBiasScanFiles[PowerBoardID][PowerUnitID][Load] = iint
-                if Load == "Nominal":
+                if Load == "High":
                     print "Offset " + str(iint)
             
-        if dictOfBiasScanFiles[PowerBoardID]["Right"]["Nominal"] > -0.0075 and dictOfBiasScanFiles[PowerBoardID]["Left"]["Nominal"] > -0.0075:
+        if dictOfBiasScanFiles[PowerBoardID]["Right"]["High"] > -0.0075 and dictOfBiasScanFiles[PowerBoardID]["Left"]["High"] > -0.0075:
 	    print "Grade for this power board is: Inner Layers grade"
         else:
             print "Grade for this power board is: Outer Layers grade"
@@ -32,7 +32,7 @@ def GetBiasResultFiles():
    PowerUnitIDCollectables = ["Right", "Left"]
    LoadCollectables = ["Low", "Nominal", "High"]
    datFiles = [x for x in os.listdir(resultsFolder) if x.split(".")[-1] == "dat"]
-   biasFiles = [x for x in datFiles if x.split("_")[3] == "BiasScan"] 
+   biasFiles = [x for x in datFiles if x.split("_")[3] == "BiasCalibration"] 
    boardFiles = {}
    for x in biasFiles:
        PowerBoardID = int(x.split("_")[0].split("-")[1])

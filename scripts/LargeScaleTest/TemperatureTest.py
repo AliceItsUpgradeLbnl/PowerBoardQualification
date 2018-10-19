@@ -65,10 +65,18 @@ def TemperatureTest(output, summary, PowerUnitID = 1, Vset=125, saveToFile = Fal
     LowerThresholdsToMin(PowerUnitID) 
     time.sleep(0.5)
     RaiseThresholdsToMax(PowerUnitID) #to avoid latching
-    UnlatchPowerAll(PowerUnitID)   # Unlatch all channels
+    UnlatchPowerWithMask(PowerUnitID, 0x000F)
     time.sleep(0.5)
+    UnlatchPowerWithMask(PowerUnitID, 0x00FF)
+    time.sleep(0.5)
+    UnlatchPowerWithMask(PowerUnitID, 0x0FFF)
+    time.sleep(0.5)
+    UnlatchPowerWithMask(PowerUnitID, 0xFFFF)
+    time.sleep(0.5)
+
     LUinitialstate = GetPowerLatchStatus(PowerUnitID)
     passed         = (LUinitialstate == 0b1111111111111111)
+    time.sleep(1)
 
     print ' '
     print 'Printing results:' 
@@ -101,7 +109,7 @@ def TemperatureTest(output, summary, PowerUnitID = 1, Vset=125, saveToFile = Fal
     passed = passed and (Tboardlast > 60.) and (Tboardlast < 70.) 
     if abs(Tboardfirst - 25.) > 5.:
         passed = False
-    if abs(Taux1first - 28.) > 5. or (Taux2first - 28.) > 5.:
+    if abs(Taux1first - 28.) > 7. or (Taux2first - 28.) > 7.:
         passed = False
     if any([x > 0.1 for x in [TboardfirstRms, Taux1firstRms, Taux2firstRms]]):
         passed = False
@@ -114,3 +122,5 @@ def TemperatureTest(output, summary, PowerUnitID = 1, Vset=125, saveToFile = Fal
         AppendTemperatureToSummaryFile(summary, puMapping[PowerUnitID - 1], initialState, initialStateRms, overtemperatureThreshold) 
 
     return passed
+
+#TemperatureTest("ab", "ba")

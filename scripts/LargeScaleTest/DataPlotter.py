@@ -1,10 +1,10 @@
 #!/usr/bin/python
 
 import PowerboardTestData as PbData
-import ROOT
+#import ROOT
 
-def PlotVoltageScanData(inputFile, load):
-    vsData = PbData.VoltageScan(load) 
+def PlotPowerVoltageScanData(inputFile, PowerUnitID, load):
+    vsData = PbData.VoltageScan(PowerUnitID = PowerUnitID, load = load, summary = "dummy") 
     vsData.readFile(inputFile)
 
     vsHasProblem = False
@@ -12,16 +12,21 @@ def PlotVoltageScanData(inputFile, load):
     if (plotOption == 1):
         vsHasProblem = vsData.visualizeAndCheck()
     elif (plotOption == 2):
-        vsHasProblem = vsData.visualizeAndCheck(True, True)
+        vsHasProblem = vsData.visualizeAndCheck(showFits = True, displayData = True, saveToFile = False)
 
     return vsHasProblem
 
-def PlotBiasScanData(inputFile, load):
-    bvsData = PbData.BiasScan(load)
+def PlotBiasVoltageScanData(inputFile, PowerUnitID, load):
+    bvsData = PbData.BiasScan(PowerUnitID = PowerUnitID, load = load, summary = "dummy")
     bvsData.readFile(inputFile)
-    bvsHasProblem = bvsData.visualizeAndCheck(True)
+    bvsHasProblem = bvsData.visualizeAndCheck(displayData = True, saveToFile = False)
 
     return bvsHasProblem
 
-def PlotThresholdScanData(inputFile, load):
-    return
+def PlotThresholdScanData(inputFile, PowerUnitID, load):
+    tsData = PbData.ThresholdScan(PowerUnitID = PowerUnitID, load = load, summary = "dummy") 
+    tsData.readFile(inputFile)
+    tsHasProblem = tsData.visualizeAndCheck(showFits = True, displayData = True, saveToFile = False)
+ 
+    return tsHasProblem
+
