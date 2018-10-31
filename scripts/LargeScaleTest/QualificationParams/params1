@@ -3,10 +3,10 @@
                                            "iintsana": 0.068, "iintsdig": 0.312, "islopesana": 0.000222, "islopesdig": 0.00093,
                                            "vupper": 2.77}, 
                               "Nominal" : {"vintsana": 1.55, "vintsdig": 1.55, "vslopesana": 0.00475, "vslopesdig": 0.00475,
-                                           "iintsana": 0.155, "iintsdig": 0.69, "islopesana": 0.000475, "islopesdig": 0.00207,
+                                           "iintsana": 0.155, "iintsdig": 0.68, "islopesana": 0.000475, "islopesdig": 0.00207,
                                            "vupper": 2.77},
                               "High"    : {"vintsana": 1.55, "vintsdig": 1.55, "vslopesana": 0.00475, "vslopesdig": 0.00475,
-			                   "iintsana": 0.31, "iintsdig": 1.49, "islopesana": 0.00094, "islopesdig": 0.00447,
+			                   "iintsana": 0.31, "iintsdig": 1.48, "islopesana": 0.00094, "islopesdig": 0.00447,
                                            "vupper": 2.57}},
 
  "vscanExpectedUpperValues": {"Low"     : {"vintsana": 1.67, "vintsanaerr": 0.003, "vintsdig": 1.66, "vintsdigerr": 0.003,
@@ -47,10 +47,10 @@
 
  "tscanExpectedLowerValues": {"Low"     : {"tints": -0.384,  "tslopes": 0.00077},
                               "Nominal" : {"tints": -0.384,  "tslopes": 0.00077},
-                              "High"    : {"tints": -0.37,   "tslopes": 0.00077}},
+                              "High"    : {"tints": -0.38,   "tslopes": 0.00077}},
 
  "tscanExpectedUpperValues": {"Low"     : {"tints": -0.313, "tintserr": 0.05, "tslopes": 0.00091, "tslopeserr": 0.00009},
                               "Nominal" : {"tints": -0.295, "tintserr": 0.07, "tslopes": 0.00091, "tslopeserr": 0.00009},
-                              "High"    : {"tints": -0.26,  "tintserr": 0.1,  "tslopes": 0.00091, "tslopeserr": 0.00009}}
+                              "High"    : {"tints": -0.26,  "tintserr": 0.15, "tslopes": 0.00091, "tslopeserr": 0.00009}}
 
 }

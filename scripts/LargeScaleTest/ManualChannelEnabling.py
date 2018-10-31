@@ -42,10 +42,10 @@ try:
             #print ReadBiasADC(PowerUnitID)
         if testType == "power":
             pass
-            #print ReadPowerADC(PowerUnitID) 
+            print ReadPowerADC(PowerUnitID) 
         time.sleep(1.)
 except KeyboardInterrupt:
-    #DisableBiasAll(PowerUnitID)
+#    DisableBiasAll(PowerUnitID)
     DisablePowerAll(PowerUnitID)
     CloseFtdi() 
     biasPs.SetOutputOff()
