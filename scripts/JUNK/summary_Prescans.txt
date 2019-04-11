@@ -1,0 +1,45 @@
+----------------------------------- Summary file -------------------------------------
+ 
+Tester: Alberto
+ 
+-------------------------- Summary for Preliminary test ------------------------------
+ 
+Power Unit Right:
+Smoke test passed? YES
+3.3V Voltage: 3.3V; 3.3V Current (must be zero): 0.0A
+-5V Voltage: 5.0V; -5V Current: 0.1A
+ 
+Power Unit Left:
+Smoke test passed? YES
+3.3V Voltage: 3.3V; 3.3V Current (must be zero): 0.0A
+-5V Voltage: 5.0V; -5V Current: 0.1A
+ 
+-------------------------- Summary for Temperature test ------------------------------
+ 
+Power Unit Right:
+Onboard sensor initial temperature.     Mean: 22.729C, RMS: 0.00951173113507
+External sensor #1 initial temperature. Mean: 29.191C, RMS: 0.0145294093055
+External sensor #2 initial temperature. Mean: 28.452C, RMS: 0.015532591901
+ 
+Power Unit Left:
+Onboard sensor initial temperature.     Mean: 23.18C, RMS: 0.00951173113507
+External sensor #1 initial temperature. Mean: 29.74C, RMS: 0.0141792516011
+External sensor #2 initial temperature. Mean: 32.317C, RMS: 0.0145294093055
+ 
+-------------------------- Summary for I2C communication test ------------------------
+ 
+Power Unit Right:
+I2C communication test completed successfully? YES
+ 
+Power Unit Left:
+I2C communication test completed successfully? YES
+ 
+-------------------------- Summary for Latch test ------------------------------------
+ 
+Power Unit Right:
+Channel: 0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  B0  B1  B2  B3
+Result:  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK
+ 
+Power Unit Left:
+Channel: 0   1   2   3   4   5   6   7   8   9   10  11  12  13  14  15  B0  B1  B2  B3
+Result:  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK  OK

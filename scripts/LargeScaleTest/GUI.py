@@ -219,16 +219,20 @@ class Application(tk.Frame):
             subprocess.call(['/bin/bash', '-c', "/home/its/Desktop/PB-production/PB-production/USB_tools/findall.sh"])
 
             # Check power and bias to the power board, if not good, exit
-            passed = PowerCycleBias() and PowerCyclePower("Both")
+            passed = PowerCycleBias() and PowerCyclePower(PowerUnitID = "Both", current = 4.)
 
             if passed:
             	# Checking I2C communication with the Power Board
             	OpenFtdi()
             	print "Attempting to read from Power Unit Right..."
             	data1 = GetBiasLatchStatus(1)
+            	data2 = GetPowerLatchStatus(1)
+                passed = passed and (int(data1, 2) == 0xff) and (data2 == 0)
             	print "Done successfully!"
             	print "Attempting to read from Power Unit Left..."
-            	data2 = GetBiasLatchStatus(2)
+            	data3 = GetBiasLatchStatus(2)
+            	data4 = GetPowerLatchStatus(2)
+                passed = passed and (int(data3, 2) == 0xff) and (data4 == 0)
             	print "Done successfully!"
             	CloseFtdi()
             	CheckComm.config(bg='green')
@@ -239,19 +243,23 @@ class Application(tk.Frame):
 	    print "                             End checking communication! Passed? " + str(passed)
 	    print "========================================================================================="
 
-        def PowerCyclePower(PowerUnitID, voltage = 3.3):
+        def PowerCyclePower(PowerUnitID, voltage = 3.3, current = 6.):
             if PowerUnitID == "Both":
-                purSuccess = PowerCyclePower("Right", voltage)
-                pulSuccess = PowerCyclePower("Left", voltage)
+                purSuccess = PowerCyclePower("Right", voltage, current)
+                pulSuccess = PowerCyclePower("Left", voltage, current)
                 return purSuccess and pulSuccess
             tdk_mapping = {"Right": 0, "Left": 1}
             tdk_id = tdk_mapping[PowerUnitID]
             try:
             	set_status_TDK(tdk_id, "OFF")
-            	time.sleep(0.2)
-            	set_volt_TDK(tdk_id, 3.3)
+            	time.sleep(3.)
+            	set_curr_TDK(tdk_id, current)
+            	set_volt_underlimit_TDK(tdk_id, 3.0)
+            	set_volt_overlimit_TDK(tdk_id, 3.6)
+            	set_volt_TDK(tdk_id, voltage)
             	set_status_TDK(tdk_id, "ON")
-            	time.sleep(0.2)
+                time.sleep(1.)
+            	set_curr_TDK(tdk_id, 30.)
             	switchcontrol_TDK(tdk_id, "LOC")
                 return True
             except:
@@ -267,6 +275,7 @@ class Application(tk.Frame):
             tdk_id = tdk_mapping[PowerUnitID]
             try:
             	set_status_TDK(tdk_id, "OFF")
+                time.sleep(5.)
             except:
                 print "Power Unit " + PowerUnitID + " 3.3V power supply not found"
 
@@ -356,16 +365,14 @@ class Application(tk.Frame):
             passed = True
 
             PowerCycleBias(voltage = 5.0)
-            PowerCyclePower(PowerUnitID, voltage = 3.3)
-
-            time.sleep(2.)
+            PowerCyclePower(PowerUnitID, voltage = 3.3, current = 4.0)
 
             # Voltages and current measurement after power on for the first time
             if not (CheckPowerStatus(PowerUnitID) and CheckBiasStatus()):
                 passed = False
 
             # Ask user if any damage was found on the power unit
-            if not tkMessageBox.askyesno("Polarized components status", "Smoke test Run for 2s per on Power Unit %s, is the board OK?" %(PowerUnitID)):
+            if not tkMessageBox.askyesno("Polarized components status", "Smoke test Run for 2s on Power Unit %s, is the board OK?" %(PowerUnitID)):
                 passed = False
 
              
@@ -772,11 +779,17 @@ class Application(tk.Frame):
         def RunAllScans(timestamp = time.strftime("%Y%m%dT%H%M%S"), saveToFile = False):
             ResetReportFieldTitle('Both')
             DeleteAllTemporaryFiles(doit = True)
+            if TestRunAlready(load.get()):
+                tkMessageBox.showinfo("Load tested already", "This power board has already been characterized with the selected load. Please delete the results before running any tests")
+                return
+            if (load.get() == 'Nominal' and not GetPowerBoardTestingStatus(GetBoardID())[0]):
+                tkMessageBox.showinfo("Wrong load selected", "Please test power board with low load first")
+                return
+            if (load.get() == 'High' and not GetPowerBoardTestingStatus(GetBoardID())[1]):
+                tkMessageBox.showinfo("Wrong load selected", "Please test power board with nominal load first")
+                return
 	    if not CheckMainParameters() or not CheckRDOConfigAndCommDone() or not CheckPrescansDone():
 	        return
-            if TestRunAlready(load.get()):
-                print "This power board has already been characterized with the selected load. Please delete the results before running any tests"
-                return
 	    root.update()
 	    RunAllTestsButton.config(state = 'disabled')
 	    passed      = {"Right": False, "Left": False}

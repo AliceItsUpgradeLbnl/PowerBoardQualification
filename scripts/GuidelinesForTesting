@@ -1,28 +1,29 @@
-Steps for testing a production power board:
+Qualification test steps:
 
-IMPORTANT NOTE: Make sure you wear protection glasses when testing power boards. Polarized capacitors, if loaded uncorrectly, can explode and damage your eyes.
+IMPORTANT NOTE: Make sure you wear protection glasses when testing power boards. Polarized capacitors, if loaded incorrectly, can blow up and damage your eyes (yes, that happens).
 
-1)  Pick one of the power boards that has a LBNL label on it. Never test unlabelled power boards.
-2)  Place the power board in the power board testing area.
-3)  Connect the chiller hoses to the power board.
-4)  Switch on the chiller. Make sure that the temperature reaches the preset value and check that there are no leaks in the hoses.
-5)  Connect both power units to the two sets of "low current loads" - To do so plug the two corresponding breakout boards to the power board front panel.
+1)  Pick one of the power boards that has a LBNL label on it from the “Power board to test” box. Never test unlabeled power boards.
+2)  Slide the power board into the aluminum crate over the testing table.
+3)  Connect the chiller hoses to the power board, making sure that they are fully engaged.
+4)  Switch on the chiller. Check that there are no leaks in the hoses.
+5)  Connect both power units to the two sets of "low current loads" - To do so plug the two corresponding breakout boards to the power board front panel. Make sure that the interface connectors are properly aligned when you do so, otherwise they might break.
 6)  Connect the 3.3V input power cable to the power board.
 7)  Connect the -5V input power cable to power board.
-8)  Connect the I2C ribble cables (flat) to Power Unit Right and Power Unit Left according to the labels on the power board and cables.
+8)  Connect the I2C ribbon cables (flat) to Power Unit Right and Power Unit Left according to the labels on the power board and cables (tape on cables should prevent wrong insertion).
 9)  Run the tests using the GUI (see below).
-10) When the test with low current loads is completed, do the following:
-   a) Repeat procedure from step 6 to 9 with "nominal current loads"
-   b) Repeat procedure from step 6 to 9 with "high current loads"
-11) When all tests are done, disconnect all the cables, loads and chiller hoses (in reverse order wrt what described above).
-12) Remove all water from the power board heat exchanger, using paper and compressed air.
-13) Store the tested power board in the designated cabinet.
+10) When the test with low current loads is completed, do the following (GUI can stay open):
+   a) Swap “low current loads” with “nominal current loads” and repeat the tests with the GUI
+   b) Swap “nominal current loads” with “high current loads” and repeat the tests with the GUI
+   c) Unplug the “high current loads” when prompted by the GUI and run a final test without loads
+11) When all tests are done, disconnect all the cables (3.3V, -5V, I2C) and loads.
+12) Disconnect the chiller hoses and use a 1/8” short tube to close the loop and avoid leaks. Collect the water that may leak during the unplugging the hoses using the appropriate equipment.
+13) Remove all water from the power board heat exchanger, using paper and compressed air.
+14) Wrap and store the tested power board in the designated cabinet on the left side of the testing station.
 
-FINAL NOTE: If one of the tests on a power board fails, conclude the tests with the current loads then follow steps 11 and 12 to disconnect the power board
-from the testing station. Once that is done put a label on the power board to mark it as non-working and add to it the name of the test(s) that didn't pass
-and which load was used. Don't put the power board in the designated power board cabinet, leave it on the bench near the power board testing station.
+FINAL NOTE: If one of the tests on a power board fails, disconnect the power board as described at steps 11 and 12. Once that is done put a postit on the power board to mark it as “non-working” and add to it the name of the test(s) that didn't pass and which load was used. Put all the power boards that don’t work inside the box labeled as “Power boards to rework”.
 
 Operation of the production power board GUI:
 
 1) Open a terminal and type "gotestproduction" then press "ENTER"
-2) Run "./GUI" 
+2) Run "./GUI"
+3) A copy of this document is available in the same folder

@@ -12,7 +12,7 @@ if len(sys.argv) != 3:
 
 testType = sys.argv[1]
 channel = int(sys.argv[2])
-PowerUnitID = 2
+PowerUnitID = 1
 
 biasPs = BkPrecision168xInterface()
 biasPs.SetVoltage(5.0)
@@ -22,7 +22,12 @@ biasPs.SetOutputOn()
 set_volt_TDK(PowerUnitID - 1, 3.3)
 set_status_TDK(PowerUnitID - 1, "ON")
 
+
 OpenFtdi() # Starts communication with RDO board
+
+RaiseThresholdsToMax(PowerUnitID)
+
+time.sleep(5)
 
 if testType == 'bias':
     UnlatchBias(channel, PowerUnitID)
@@ -33,19 +38,17 @@ else:
     exit()
 
 ConfigurePowerADC(PowerUnitID)
-#ConfigureBiasADC(PowerUnitID)
+ConfigureBiasADC(PowerUnitID)
 
 try:
     while(True):
         if testType == "bias":
-            pass
-            #print ReadBiasADC(PowerUnitID)
+            print ReadBiasADC(PowerUnitID)
         if testType == "power":
-            pass
             print ReadPowerADC(PowerUnitID) 
         time.sleep(1.)
 except KeyboardInterrupt:
-#    DisableBiasAll(PowerUnitID)
+    DisableBiasAll(PowerUnitID)
     DisablePowerAll(PowerUnitID)
     CloseFtdi() 
     biasPs.SetOutputOff()

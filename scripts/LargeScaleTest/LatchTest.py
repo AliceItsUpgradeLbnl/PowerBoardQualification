@@ -107,9 +107,9 @@ def LatchTest(output, load, PowerUnitID):
 
         # Setting threshold low, enabling channel and setting threshold high after 10ms (short time)
         if (channel % 2):
-            SetThreshold(channel, 0x339, PowerUnitID) # Lowering digital thresholds so the channels will latch at poweron (however threshold will be raised so it won't happen)
+            SetThreshold(channel, 0x300, PowerUnitID) # Lowering digital thresholds so the channels will latch at poweron (however threshold will be raised so it won't happen)
         else:
-            SetThreshold(channel, 0x21E, PowerUnitID) # Lowering analog thresholds so the channels will latch at poweron (however threshold will be raised so it won't happen)
+            SetThreshold(channel, 0x200, PowerUnitID) # Lowering analog thresholds so the channels will latch at poweron (however threshold will be raised so it won't happen)
 	time.sleep(0.010)  # Setting time of the threshold
         ListOfCommands = []
         LinkType       = IOExpanderPowerLink
@@ -197,7 +197,7 @@ def LatchTest(output, load, PowerUnitID):
             print "Bias channel states are wrong!"            
             line = "%2s %10d %23d %18d %70s" %("B" + str(biasOutput), poweronStates, 0x7 - afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not (abs(finalCurrent - idleCurrent) < 0.0001 and voltage > -3.5 and voltage < -2.5):
+        elif not (abs(finalCurrent - idleCurrent) < 0.0002 and voltage > -3.5 and voltage < -2.5):
             print "Mismatch between idle current and current after all channel disable, or voltage not in the expected range"
             line = "%2s %10d %23d %18d %70s" %("B" + str(biasOutput), poweronStates, 0x7 - afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
@@ -237,8 +237,8 @@ def LatchTest(output, load, PowerUnitID):
             print currentLimit, offset
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not ((abs(finalCurrent - idleCurrent) < 0.0001) and ((abs(voltage)/currentLimit) - 28.)/28. < 0.1) :
-            print "Mistmatch between idle current and current after all channel disabled or wrong load measurement" 
+        elif not ((abs(finalCurrent - idleCurrent) < 0.0002) and ((abs(voltage)/currentLimit) - 28.)/28. < 0.1) :
+            print "Mismatch between idle current and current after all channel disabled or wrong load measurement" 
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
         else:
@@ -248,7 +248,7 @@ def LatchTest(output, load, PowerUnitID):
             print "Bias channel states are wrong!"            
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
-        elif not (abs(finalCurrent - idleCurrent) < 0.0001 and voltage < -4.5):
+        elif not (abs(finalCurrent - idleCurrent) < 0.0002 and voltage < -4.5):
             print "Mismatch between idle current and current after all channel disable, or voltage is higher than -4.5V"
             line = "%2s %10d %23d %18d %70s" %("B3", poweronStates, afterEnablingStates, afterDisablingStates, 'NO')
             passed = False

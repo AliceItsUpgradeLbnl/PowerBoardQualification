@@ -4,7 +4,7 @@
   "BiasScan_end": -1,
   "BiasScan_maxfit": {"Low": 110, "Nominal": 110, "High": 110},
   "BiasScan_nsamples": 10,
-  "LatchTest_minrc": 5,
+  "LatchTest_minrc": 4,
   "LatchTest_maxrc": 13,
   "PowerScan_Vstep": 10,
   "PowerScan_start": 250,
