@@ -1,8 +1,8 @@
  
 Power on Voltages and currents:
 Channel:              0      1      2      3      4      5      6      7      8      9     10     11     12     13     14     15     NREG
-Voltage (e-3) [V]: 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 -4768.7500
-Current (e-3) [I]: -4.167 -3.250 -4.333 -2.500 -5.750 -6.167 -3.333 -4.167 -3.333 -6.667 -3.333 -5.000 -1.833 -3.333 -2.833 -1.833 52.994
+Voltage (e-3) [V]: 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 -4792.5000
+Current (e-3) [I]: -4.167 -6.667 -3.417 -3.333 -3.750 -4.167 -3.333 -1.917 -1.667 -3.000 -4.167 -3.333 -5.000 -6.667 -5.833 -6.833 44.125
  
 CH#   After PB powering  /  After Enabling  /  After Disabling  /  After Power not latched  /  After Power Latched  /  All checks passed?
  0          0                       1                  0                       1                        0                   YES
@@ -26,4 +26,4 @@ B1          0                       2                  0                        
 B2          0                       4                  0                                                                    YES
 B3          0                       8                  0                                                                    YES
  
-Negative voltage regulator hardware current limit measured with Low current loads: 0.090849
+Negative voltage regulator hardware current limit measured with Low current loads: 0.097018
