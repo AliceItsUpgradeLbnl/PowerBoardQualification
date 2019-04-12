@@ -85,9 +85,9 @@ def LatchTest(output, load, PowerUnitID):
     for channel in range(16):
         # Setting threshold low, enabling channel and setting threshold high after 10ms (short time)
         if (channel % 2):
-            SetThreshold(channel, 0x339, PowerUnitID) # Lowering digital thresholds so the channels will latch at poweron (however threshold will be raised so it won't happen)
+            SetThreshold(channel, 0x349, PowerUnitID) # Lowering digital thresholds so the channels will latch at poweron (however threshold will be raised so it won't happen)
         else:
-            SetThreshold(channel, 0x21E, PowerUnitID) # Lowering analog thresholds so the channels will latch at poweron (however threshold will be raised so it won't happen)
+            SetThreshold(channel, 0x22E, PowerUnitID) # Lowering analog thresholds so the channels will latch at poweron (however threshold will be raised so it won't happen)
 	time.sleep(0.010)  # Setting time of the threshold
         ListOfCommands = []
         LinkType       = IOExpanderPowerLink
