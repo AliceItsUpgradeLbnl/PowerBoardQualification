@@ -1,6 +1,6 @@
 ----------------------------------- Summary file -------------------------------------
  
-Tester: Alberto
+Tester: Zhenzhen
  
 -------------------------- Summary for Preliminary test ------------------------------
  
@@ -12,19 +12,19 @@ Smoke test passed? YES
 Power Unit Left:
 Smoke test passed? YES
 3.3V Voltage: 3.3V; 3.3V Current (must be zero): 0.0A
--5V Voltage: 5.0V; -5V Current: 0.1A
+-5V Voltage: 5.0V; -5V Current: 0.11A
  
 -------------------------- Summary for Temperature test ------------------------------
  
 Power Unit Right:
-Onboard sensor initial temperature.     Mean: 22.977C, RMS: 0.0145294093055
-External sensor #1 initial temperature. Mean: 29.128C, RMS: 0.0145294093055
-External sensor #2 initial temperature. Mean: 28.677C, RMS: 0.0158528852251
+Onboard sensor initial temperature.     Mean: 26.956C, RMS: 0.0126823081801
+External sensor #1 initial temperature. Mean: 30.519C, RMS: 0.015532591901
+External sensor #2 initial temperature. Mean: 30.05C, RMS: 0.0190234622701
  
 Power Unit Left:
-Onboard sensor initial temperature.     Mean: 23.297C, RMS: 0.0190234622701
-External sensor #1 initial temperature. Mean: 33.525C, RMS: 0.015532591901
-External sensor #2 initial temperature. Mean: 32.675C, RMS: 0.015532591901
+Onboard sensor initial temperature.     Mean: 26.838C, RMS: 0.0158528852251
+External sensor #1 initial temperature. Mean: 29.841C, RMS: 0.0126823081801
+External sensor #2 initial temperature. Mean: 29.467C, RMS: 0.015532591901
  
 -------------------------- Summary for I2C communication test ------------------------
  

@@ -198,6 +198,7 @@ def LatchTest(output, load, PowerUnitID):
             line = "%2s %10d %23d %18d %70s" %("B" + str(biasOutput), poweronStates, 0x7 - afterEnablingStates, afterDisablingStates, 'NO')
             passed = False
         elif not (abs(finalCurrent - idleCurrent) < 0.0002 and voltage > -3.5 and voltage < -2.5):
+            print abs(finalCurrent - idleCurrent), voltage
             print "Mismatch between idle current and current after all channel disable, or voltage not in the expected range"
             line = "%2s %10d %23d %18d %70s" %("B" + str(biasOutput), poweronStates, 0x7 - afterEnablingStates, afterDisablingStates, 'NO')
             passed = False

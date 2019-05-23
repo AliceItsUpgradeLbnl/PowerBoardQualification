@@ -29,3 +29,4 @@ LOCATION = 'Lawrence Berkeley National Laboratory, Berkeley, California'
 
 ELEC_TESTS_FILENAME = '../ElectricalTests/PbIdList.txt'
 SUMMARY_FILES_DIR = '/home/its/Desktop/PB-production/PB-production/scripts/RESULTS'
+STAGING_DB = 'powerboardstaging.db'

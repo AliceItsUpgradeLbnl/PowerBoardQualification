@@ -27,6 +27,8 @@ OpenFtdi() # Starts communication with RDO board
 
 RaiseThresholdsToMax(PowerUnitID)
 
+SetPowerVoltageAll(200, PowerUnitID)
+
 time.sleep(5)
 
 if testType == 'bias':
