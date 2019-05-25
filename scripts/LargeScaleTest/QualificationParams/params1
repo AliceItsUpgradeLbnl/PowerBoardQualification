@@ -45,12 +45,12 @@
 			                    "iint": 0.015, "iinterr": 0.0002, "islope": 0.00070, "islopeerr": 0.000002,
                                             "vlower": -4.0, "vnoise": 2.0, "inoise": 0.1}},
 
- "tscanExpectedLowerValues": {"Low"     : {"tints": -0.384,  "tslopes": 0.00077},
-                              "Nominal" : {"tints": -0.415,  "tslopes": 0.00077},
-                              "High"    : {"tints": -0.48,   "tslopes": 0.00077}},
+ "tscanExpectedLowerValues": {"Low"     : {"tints": -0.384,  "tslopes": 0.00073},
+                              "Nominal" : {"tints": -0.415,  "tslopes": 0.00073},
+                              "High"    : {"tints": -0.48,   "tslopes": 0.00073}},
 
  "tscanExpectedUpperValues": {"Low"     : {"tints": -0.313, "tintserr": 0.05, "tslopes": 0.00091, "tslopeserr": 0.00009},
-                              "Nominal" : {"tints": -0.295, "tintserr": 0.07, "tslopes": 0.00091, "tslopeserr": 0.00009},
+                              "Nominal" : {"tints": -0.28,  "tintserr": 0.07, "tslopes": 0.00091, "tslopeserr": 0.00009},
                               "High"    : {"tints": -0.26,  "tintserr": 0.15, "tslopes": 0.00091, "tslopeserr": 0.00009}}
 
 }

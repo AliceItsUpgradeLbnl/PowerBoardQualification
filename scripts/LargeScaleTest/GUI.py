@@ -111,6 +111,26 @@ class Application(tk.Frame):
         self.box_num  = 0
         self.BoardID = None
 
+        def beep(passed = False):
+          if passed:
+            duration = 0.5  # seconds
+            freq = 440  # Hz
+            command = 'play -nq -t alsa synth ' + str(duration) + ' sine ' + str(freq)
+            os.system(command)
+            duration = 0.5  # seconds
+            freq = 880  # Hz
+            command = 'play -nq -t alsa synth ' + str(duration) + ' sine ' + str(freq)
+            os.system(command)
+          else:
+            duration = 0.5  # seconds
+            freq = 440  # Hz
+            command = 'play -nq -t alsa synth ' + str(duration) + ' sine ' + str(freq)
+            os.system(command)
+            duration = 0.5  # seconds
+            freq = 220  # Hz
+            command = 'play -nq -t alsa synth ' + str(duration) + ' sine ' + str(freq)
+            os.system(command)
+
         ## Setters, getters and more ##############################
         def buildOutputFilename(timestamp, testName, PowerUnitID):
           filename = outputFolder
@@ -718,7 +738,7 @@ class Application(tk.Frame):
             if not CheckMainParameters() or not CheckRDOConfigAndCommDone():
                 return
             if TestRunAlready(load.get()):
-                print "This power board has already been characterized with the selected load. Please delete the results before running any tests"
+                print "This power board has already been characterized with the selected load. if needed, please delete these results before running tests with the selected load"
                 return
 	    root.update()
             self.summaryFile = CreateSummaryFileForSpecificLoad("Noload", isPrescans = True)
@@ -739,7 +759,9 @@ class Application(tk.Frame):
                     RunPrescansButton.config(state = 'normal')
 	            TurnOffPower("Both")
 	            TurnOffBias()
+                    beep(False)
                     return
+            tkMessageBox.showinfo("Switch on chiller", "Please switch on the chiller then let the power board cool for 2 minutes and then press OK")
 	    for PowerUnitID in PowerUnitIDs:
 		PowerCycleBias()
 		PowerCyclePower(PowerUnitID)
@@ -748,6 +770,7 @@ class Application(tk.Frame):
                     RunPrescansButton.config(state = 'normal')
 	            TurnOffPower("Both")
 	            TurnOffBias()
+                    beep(False)
                     return
 	    for PowerUnitID in PowerUnitIDs:
 		PowerCycleBias()
@@ -757,6 +780,7 @@ class Application(tk.Frame):
                     RunPrescansButton.config(state = 'normal')
 	            TurnOffPower("Both")
 	            TurnOffBias()
+                    beep(False)
                     return
             for PowerUnitID in PowerUnitIDs:
        	        ResetReportFieldTitle(PowerUnitID)
@@ -805,6 +829,7 @@ class Application(tk.Frame):
 	            RunAllTestsButton.config(state="normal")
 	            TurnOffPower("Both")
 	            TurnOffBias()
+                    beep(False)
                     return passed
 	    for PowerUnitID in PowerUnitIDs:
 	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunPowerVoltageScan(timestamp, saveToFile, PowerUnitID)) << 4)
@@ -812,6 +837,7 @@ class Application(tk.Frame):
 	            RunAllTestsButton.config(state="normal")
 	            TurnOffPower("Both")
 	            TurnOffBias()
+                    beep(False)
                     return passed
 	    for PowerUnitID in PowerUnitIDs:
 	        testResults[PowerUnitID] = testResults[PowerUnitID] | (int(RunThresholdScan(timestamp, saveToFile, PowerUnitID))    << 5)
@@ -819,6 +845,7 @@ class Application(tk.Frame):
 	            RunAllTestsButton.config(state="normal")
 	            TurnOffPower("Both")
 	            TurnOffBias()
+                    beep(False)
                     return passed
 	    for PowerUnitID in PowerUnitIDs:
 	        ResetReportFieldTitle(PowerUnitID)
@@ -833,7 +860,10 @@ class Application(tk.Frame):
 	    if passed["Right"] and passed["Left"]:
                 # Calibration scan for power 
                 if load.get() == "High":
-                    tkMessageBox.showinfo("Unconnect loads", "The GUI will now run some calibration scans, please unconnect the loads from the Power Board")
+                    beep(True)
+                    tkMessageBox.showinfo("Info", "The GUI will now run some calibration scans, please disconnect the loads from the Power Board")
+                    tkMessageBox.showinfo("Info", "Are you sure that the loads are disconnected from the power board? If not, please disconnect them")
+                    tkMessageBox.showinfo("Info", "100% sure?")
 	            for PowerUnitID in PowerUnitIDs:
 	                RunPowerCalibration(timestamp, saveToFile, PowerUnitID)
                     # Calibration scan for bias
@@ -843,13 +873,20 @@ class Application(tk.Frame):
 	        WriteDataFiles()
 	        if load.get() == "High":
 		    CreateSummaryFile()
+	            TurnOffPower("Both")
+	            TurnOffBias()
+                    beep(True)
+	            tkMessageBox.showwarning( "Info", "All tests finished. Please switch off the chiller, disconnect the chiller hoses and front panel connectors and close this GUI", icon="info")
+	            tkMessageBox.showwarning( "Info", "Is the chiller off and are all the connectors/hoses disconnected?", icon="info")
+	            tkMessageBox.showwarning( "Info", "100% sure?", icon="info")
+                else:
+  	            TurnOffPower("Both")
+	            TurnOffBias()
+                    beep(True)
+	            tkMessageBox.showwarning( "Info", "All tests finished. Disconnect the current load from the power board and connect the next load.", icon="info")
+	    RunAllTestsButton.config(state="normal")
 	    pbtestingStatus = GetPowerBoardTestingStatus(GetBoardID())
 	    SetPbtestingStatusFields(pbtestingStatus)
-	    # Tests are finished, resetting parameters
-	    tkMessageBox.showwarning( "Info", "All tests finished.", icon="info")
-	    RunAllTestsButton.config(state="normal")
-	    TurnOffPower("Both")
-	    TurnOffBias()
 	    if pbtestingStatus == [1, 1, 1]:
 	        UnlockBoardID()
 	        CheckComm['bg'] = 'salmon'
@@ -1315,4 +1352,5 @@ class Application(tk.Frame):
 root = tk.Tk()
 app = Application(master=root)
 app.master.title("Production Power Board Qualification GUI")
+tkMessageBox.showinfo("Info", "Please make sure that:\n 1) The chiller hoses are connected to the power board (the chiller must be off)\n 2) All the power supplies are turned on\n 3) All the front panel cables are connected to the power board front panel interface")
 app.mainloop()
