@@ -5,14 +5,13 @@ from BkPrecision168xInterface import BkPrecision168xInterface
 from PowerUtils import *
 import sys
 
-
 if len(sys.argv) != 3:
     print "Wrong number of passed arguments"
     sys.exit()
 
 testType = sys.argv[1]
 channel = int(sys.argv[2])
-PowerUnitID = 2
+PowerUnitID = 1
 
 biasPs = BkPrecision168xInterface()
 biasPs.SetVoltage(5.0)
@@ -41,6 +40,7 @@ else:
 
 ConfigurePowerADC(PowerUnitID)
 ConfigureBiasADC(PowerUnitID)
+RaiseThresholdsToMax(PowerUnitID)
 
 try:
     while(True):

@@ -19,6 +19,8 @@ columns["BiasScan"]        = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "
 columns["TemperatureTest"] = ["Vavg", "Itot", "TBoard", "TAux1", "TAux2", "Timestamp"]
 columns["LatchTest"]       = ["ChannelNumber", "BeforeEnabling", "AfterEnabling", "AfterLatching"]
 columns["TestInfo"]        = ["BoardNumber", "BoardVersion", "TestNumber", "LoadType", "PowerUnit", "Config", "Tester", "Timestamp"]
+columns["BiasScanCalibration"]    = ["VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState", "Timestamp"]
+columns["VoltageScanCalibration"] = ["ChannelNumber", "VsetDAC", "V", "Vrms", "dV", "I", "Irms", "dI", "R", "T", "LUState", "Timestamp"]
 
 configFolder = '/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationConfig/'
 paramsFolder = '/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationParams/'
@@ -542,7 +544,7 @@ class BiasScan(Scan):
 
         dac, v, i, vrms, dv, irms, di = array('f'), array('f'), array('f'), array('f'), array('f'), array('f'), array('f')
         vlower = 0.
-        vuuper = 0.
+        vupper = 0.
         for step in self.Data:
 	    if int(step["VsetDAC"]) == 130:
                 vlower = float(step["V"])
@@ -734,3 +736,55 @@ class TestInfo(object):
     def readDB(self, boardNumber, testId=0):
         self.Data = db.getRows("TestInfo", boardNumber, testId)[0]
         self.Id = self.Data["Id"]
+
+class BiasScanCalibration(Scan):
+    def __init__(self):
+        Scan.__init__(self, "BiasScanCalibration", False)
+
+    def visualizeAndCheck(self):
+        hasProblem = False
+
+        dac, v, i, vrms, dv, irms, di = array('f'), array('f'), array('f'), array('f'), array('f'), array('f'), array('f')
+        for step in self.Data:
+            # Fill data structures
+            dac.append(float(step["VsetDAC"]))
+            v.append(float(step["V"]))
+            i.append(float(step["I"]))
+            vrms.append(float(step["Vrms"]))
+            dv.append(float(step["dV"]))
+            irms.append(float(step["Irms"]))
+            di.append(float(step["dI"]))
+
+        # Voltage noise check
+        if any([i[st] > (abs(v[st])/100. + 0.015) for st in range(0, len(i))]):
+            hasProblem = True
+            print "Bias current is high. Make sure that no loads are connected to the power board during calibration."
+            
+        return hasProblem
+
+class VoltageScanCalibration(Scan):
+    def __init__(self):
+        Scan.__init__(self, "VoltageScanCalibration", True)
+ 
+    def visualizeAndCheck(self):
+        hasProblem = False
+
+        for channelNumber in range(0, 16):
+            channels.append(float(channelNumber))
+
+            # pulling relevant data
+            dac = array('f')
+            v   = array('f')
+            i   = array('f')
+
+            for step in self.ChannelData[str(channelNumber)]:
+                # Fill data structures
+                dac.append(float(step["VsetDAC"]))
+                v.append(float(step["V"]))
+                i.append(float(step["I"]))
+
+            if any([i[st] > 0.010 for st in range(0, len(i))]):
+                hasProblem = True
+                print "Positive voltage current is high. Make sure that no loads are connected to the power board during calibration"
+
+        return hasProblem

@@ -1,12 +1,12 @@
 {
  "vscanExpectedLowerValues": {"Low"     : {"vintsana": 1.55, "vintsdig": 1.55, "vslopesana": 0.00472, "vslopesdig": 0.0047,
-                                           "iintsana": 0.068, "iintsdig": 0.312, "islopesana": 0.000219, "islopesdig": 0.00092,
+                                           "iintsana": 0.067, "iintsdig": 0.312, "islopesana": 0.000219, "islopesdig": 0.00092,
                                            "vupper": 2.77}, 
                               "Nominal" : {"vintsana": 1.55, "vintsdig": 1.55, "vslopesana": 0.00472, "vslopesdig": 0.0047,
-                                           "iintsana": 0.155, "iintsdig": 0.68, "islopesana": 0.00047, "islopesdig": 0.0020,
+                                           "iintsana": 0.154, "iintsdig": 0.68, "islopesana": 0.00047, "islopesdig": 0.0020,
                                            "vupper": 2.77},
                               "High"    : {"vintsana": 1.55, "vintsdig": 1.55, "vslopesana": 0.00472, "vslopesdig": 0.0047,
-			                   "iintsana": 0.308, "iintsdig": 1.48, "islopesana": 0.00092, "islopesdig": 0.0044,
+			                   "iintsana": 0.306, "iintsdig": 1.48, "islopesana": 0.00092, "islopesdig": 0.0044,
                                            "vupper": 2.53}},
 
  "vscanExpectedUpperValues": {"Low"     : {"vintsana": 1.68, "vintsanaerr": 0.004, "vintsdig": 1.66, "vintsdigerr": 0.004,
@@ -16,10 +16,10 @@
                                            "vlower": 1.67, "vnoise": 2.0, "inoise": 2.0}, 
                               "Nominal" : {"vintsana": 1.68, "vintsanaerr": 0.004, "vintsdig": 1.66, "vintsdigerr": 0.004,
                                            "vslopesana": 0.0052, "vslopesanaerr": 0.00003, "vslopesdig": 0.0051, "vslopesdigerr": 0.00003,
-                                           "iintsana": 0.17, "iintsanaerr": 0.0003, "iintsdig": 0.75, "iintsdigerr": 0.0012,
-                                           "islopesana": 0.00052, "islopesanaerr": 0.0000025, "islopesdig": 0.00224, "islopesdigerr": 0.00001,
-                                           "vlower": 1.67, "vnoise": 2.0, "inoise": 2.0},
-                              "High"    : {"vintsana": 1.68, "vintsanaerr": 0.004, "vintsdig": 1.66, "vintsdigerr": 0.004,
+                                           "iintsana": 0.17, "iintsanaerr": 0.0003, "iintsdig": 0.75, "iintsdigerr": 0.002,
+                                           "islopesana": 0.00052, "islopesanaerr": 0.0000025, "islopesdig": 0.00224, "islopesdigerr": 0.00002,
+                                           "vlower": 1.67, "vnoise": 3.0, "inoise": 3.0},
+                              "High"    : {"vintsana": 1.68, "vintsanaerr": 0.004, "vintsdig": 1.67, "vintsdigerr": 0.004,
                                            "vslopesana": 0.0052, "vslopesanaerr": 0.00003, "vslopesdig": 0.0051, "vslopesdigerr": 0.000035,
 			                   "iintsana": 0.35, "iintsanaerr": 0.0012, "iintsdig": 1.60, "iintsdigerr": 0.0035,
                                            "islopesana": 0.00102, "islopesanaerr": 0.000011, "islopesdig": 0.00483, "islopesdigerr": 0.000032,
@@ -35,15 +35,15 @@
 			                    "iint": -0.015, "islope": 0.00061,
                                             "vupper": -0.01}},
 
- "bvscanExpectedUpperValues": {"Low"     : {"vint": 0.015, "vinterr": 0.002, "vslope": -0.036, "vslopeerr": 0.00003,
-			                    "iint": 0.015, "iinterr": 0.0002, "islope": 0.00057, "islopeerr": 0.000002,
-                                            "vlower": -4.5, "vnoise": 2.0, "inoise": 0.1},
-                               "Nominal" : {"vint": 0.015, "vinterr": 0.002, "vslope": -0.036, "vslopeerr": 0.00003, 
-			                    "iint": 0.015, "iinterr": 0.0002, "islope": 0.00061, "islopeerr": 0.000002,
-                                            "vlower": -4.5, "vnoise": 2.0, "inoise": 0.1},
-                               "High"    : {"vint": 0.015, "vinterr": 0.002, "vslope": -0.036, "vslopeerr": 0.00003,
-			                    "iint": 0.015, "iinterr": 0.0002, "islope": 0.00070, "islopeerr": 0.000002,
-                                            "vlower": -4.0, "vnoise": 2.0, "inoise": 0.1}},
+ "bvscanExpectedUpperValues": {"Low"     : {"vint": 0.015, "vinterr": 0.004, "vslope": -0.036, "vslopeerr": 0.00005,
+			                    "iint": 0.015, "iinterr": 0.0004, "islope": 0.00057, "islopeerr": 0.000004,
+                                            "vlower": -4.5, "vnoise": 3.0, "inoise": 0.1},
+                               "Nominal" : {"vint": 0.015, "vinterr": 0.004, "vslope": -0.036, "vslopeerr": 0.00005, 
+			                    "iint": 0.015, "iinterr": 0.0004, "islope": 0.00061, "islopeerr": 0.000004,
+                                            "vlower": -4.5, "vnoise": 3.0, "inoise": 0.1},
+                               "High"    : {"vint": 0.015, "vinterr": 0.004, "vslope": -0.036, "vslopeerr": 0.00005,
+			                    "iint": 0.015, "iinterr": 0.0004, "islope": 0.00070, "islopeerr": 0.000004,
+                                            "vlower": -4.0, "vnoise": 3.0, "inoise": 0.1}},
 
  "tscanExpectedLowerValues": {"Low"     : {"tints": -0.384,  "tslopes": 0.00073},
                               "Nominal" : {"tints": -0.415,  "tslopes": 0.00073},
@@ -51,6 +51,6 @@
 
  "tscanExpectedUpperValues": {"Low"     : {"tints": -0.313, "tintserr": 0.05, "tslopes": 0.00091, "tslopeserr": 0.00009},
                               "Nominal" : {"tints": -0.28,  "tintserr": 0.07, "tslopes": 0.00091, "tslopeserr": 0.00009},
-                              "High"    : {"tints": -0.26,  "tintserr": 0.15, "tslopes": 0.00091, "tslopeserr": 0.00009}}
+                              "High"    : {"tints": -0.25,  "tintserr": 0.15, "tslopes": 0.00091, "tslopeserr": 0.00009}}
 
 }

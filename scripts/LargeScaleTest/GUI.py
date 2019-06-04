@@ -41,7 +41,7 @@ import ReadParams
 
 #params = ReadParams.GetMostRecentParams('/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/QualificationParams/')
  
-tsMode = 'normal' # Throubleshooting mode
+tsMode = 'normal' # Throubleshooting mode (normal / disable)
 
 class StopTest(Exception):
     pass

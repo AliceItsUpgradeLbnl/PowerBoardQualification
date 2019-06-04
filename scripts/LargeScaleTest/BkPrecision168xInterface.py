@@ -3,7 +3,7 @@ import subprocess
 import time
 
 # All voltages in [V] - output voltage settable range 0.8A:18A - resolution 0.1V
-# All currents in [A] - output current settable range 0A-20A - resolution 0.1V
+# All currents in [A] - output current settable range 0A-20A - resolution 0.1A
 
 class BkPrecision168xInterface():
     def __init__(self, usbPort=None):
