@@ -107,9 +107,9 @@ def TemperatureTest(output, summary, PowerUnitID = 1, Vset=125, saveToFile = Fal
 
     # Test is passed if the last temperature of the board is 70C and the other two temperatures are within 5 degrees of 25C
     passed = passed and (Tboardlast > 60.) and (Tboardlast < 71.) 
-    if abs(Tboardfirst - 25.) > 5.:
+    if abs(Tboardfirst - 25.) > 7.:
         passed = False
-    if abs(Taux1first - 28.) > 7. or (Taux2first - 28.) > 7.:
+    if abs(Taux1first - 28.) > 10. or (Taux2first - 28.) > 10.:
         passed = False
     if any([x > 0.1 for x in [TboardfirstRms, Taux1firstRms, Taux2firstRms]]):
         passed = False

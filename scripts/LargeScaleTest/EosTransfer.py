@@ -29,7 +29,7 @@ def EosRsync(key):
         print "Origin: " + absolute_path_origin
         print "Destination: " + absolute_path_destination
         print "Please wait ..."
-        child.expect('total size is')
+        child.expect([pexpect.TIMEOUT, 'total size is'])
         child.expect('\n')
         print "Done!"
         child.interact()

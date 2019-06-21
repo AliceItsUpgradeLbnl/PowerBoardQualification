@@ -4,8 +4,10 @@ from zeep import Client
 from zeep.transports import Transport
 
 from dbconstants import WSDL
+# from KerberosTicketGenerator import AttemptGenerateKerberosTicket
 
 try:
+    # AttemptGenerateKerberosTicket()
     cookies = cern_sso.krb_sign_on(WSDL)
     transport = Transport(cache=False)
     transport.session.cookies.update(cookies)

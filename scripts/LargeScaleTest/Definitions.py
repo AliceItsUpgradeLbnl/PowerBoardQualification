@@ -30,8 +30,8 @@ import math
 import ftdIOmodule
 
 # serial numbers of the ftdi dev/port on the RDO board 
-ftdiSerial     = "FTWUOJEW"
-ftdiSerialFull = "FTWUOJEWA"
+ftdiSerial     = "FTWXEWSN"
+ftdiSerialFull = "FTWXEWSNA"
 
 # firmware headers/trailers
 SPIHEADERMSP   = 0xADC

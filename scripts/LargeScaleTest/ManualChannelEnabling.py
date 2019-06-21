@@ -11,7 +11,7 @@ if len(sys.argv) != 3:
 
 testType = sys.argv[1]
 channel = int(sys.argv[2])
-PowerUnitID = 1
+PowerUnitID = 2
 
 biasPs = BkPrecision168xInterface()
 biasPs.SetVoltage(5.0)
@@ -25,6 +25,7 @@ set_status_TDK(PowerUnitID - 1, "ON")
 OpenFtdi() # Starts communication with RDO board
 
 RaiseThresholdsToMax(PowerUnitID)
+#SetThresholdAll(PowerUnitID, 0x800)
 
 SetPowerVoltageAll(200, PowerUnitID)
 
@@ -40,7 +41,7 @@ else:
 
 ConfigurePowerADC(PowerUnitID)
 ConfigureBiasADC(PowerUnitID)
-RaiseThresholdsToMax(PowerUnitID)
+#RaiseThresholdsToMax(PowerUnitID)
 
 try:
     while(True):

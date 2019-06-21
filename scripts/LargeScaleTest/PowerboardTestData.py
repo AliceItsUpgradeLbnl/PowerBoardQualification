@@ -68,7 +68,6 @@ class ThresholdScan(Scan):
 
     def visualizeAndCheck(self, showFits = False, displayData = False, saveToFile = False):
         hasProblem = False
-
         # setting up all of the arrays
         channels, thvsi = array('f'), array('f')  
         iints, islopes = array('f'), array('f')
