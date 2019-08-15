@@ -32,9 +32,10 @@ SetPowerVoltageAll(200, PowerUnitID)
 time.sleep(5)
 
 if testType == 'bias':
-    UnlatchBias(channel, PowerUnitID)
+    UnlatchBiasAll(PowerUnitID)
 elif testType == 'power':
-    UnlatchPower(channel, PowerUnitID)
+    #UnlatchPower(channel, PowerUnitID)
+    UnlatchPowerAll(PowerUnitID)
 else:
     print "Invalid test or channel"
     exit()

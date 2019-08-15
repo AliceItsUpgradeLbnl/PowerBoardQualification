@@ -1,6 +1,6 @@
 iMPACT Version: Oct 13 2013 08:43:40
 
-iMPACT log file Started on Mon Jun 10 17:53:03 2019
+iMPACT log file Started on Tue Aug 13 14:41:20 2019
 
 Preference Table
 Name                 Setting             
@@ -26,7 +26,7 @@ INFO:iMPACT - Digilent Plugin: Product ID: 30700150
 INFO:iMPACT - Digilent Plugin: Firmware Version: 0108
 INFO:iMPACT - Digilent Plugin: JTAG Port Number: 0
 INFO:iMPACT - Digilent Plugin: JTAG Clock Frequency: 10000000 Hz
-Identifying chain contents...'0': : Manufacturer's ID = Xilinx xc6vlx240t, Version : 8
+Identifying chain contents...'0': : Manufacturer's ID = Xilinx xc6vlx240t, Version : 6
 INFO:iMPACT:1777 - 
    Reading /home/its/xilinx/14.7/ISE_DS/ISE/virtex6/data/xc6vlx240t.bsd...
 INFO:iMPACT:501 - '1': Added Device xc6vlx240t successfully.
@@ -48,9 +48,9 @@ INFO:iMPACT:501 - '1': Added Device xc6vlx240t successfully.
 Maximum TCK operating frequency for this device chain: 66000000.
 Validating chain...
 Boundary-scan chain validated successfully.
-1: Device Temperature: Current Reading:   40.04 C, Min. Reading:   39.05 C, Max.Reading:   41.02 C
-1: VCCINT Supply: Current Reading:   0.996 V, Min. Reading:   0.993 V, Max.Reading:   1.002 V
-1: VCCAUX Supply: Current Reading:   2.493 V, Min. Reading:   2.490 V, Max.Reading:   2.499 V
+1: Device Temperature: Current Reading:   39.55 C, Min. Reading:   36.59 C, Max.Reading:   39.55 C
+1: VCCINT Supply: Current Reading:   0.999 V, Min. Reading:   0.996 V, Max.Reading:   1.002 V
+1: VCCAUX Supply: Current Reading:   2.499 V, Min. Reading:   2.493 V, Max.Reading:   2.502 V
 '1': Programming device...
  Match_cycle = NoWait.
 Match cycle: NoWait
@@ -67,4 +67,4 @@ Match cycle: NoWait
 LCK cycle: NoWait
 INFO:iMPACT - '1': Checking done pin....done.
 '1': Programmed successfully.
-Elapsed time =      7 sec.
+Elapsed time =      8 sec.

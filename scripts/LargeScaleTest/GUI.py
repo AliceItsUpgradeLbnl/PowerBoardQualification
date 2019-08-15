@@ -357,7 +357,7 @@ class Application(tk.Frame):
             bk_voltage = float(self.biasPs.GetVoltage())
             bk_current = float(self.biasPs.GetCurrent())
             bk_mode    = self.biasPs.GetMode()
-            if (bk_mode != "CV" or  bk_voltage < 4.99 or bk_voltage > 5.01 or bk_current > 0.150 or bk_current < 0.07):
+            if (bk_mode != "CV" or  bk_voltage < 4.99 or bk_voltage > 5.01 or bk_current > 0.150 or bk_current < 0.06):
                 print bk_mode, bk_voltage, bk_current
                 print "Error: Bias Status is wrong" 
                 return False
