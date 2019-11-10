@@ -515,3 +515,30 @@ add PB-0032 qual test to DB
 add PB-0033 qual test to DB
 add PB-0034 qual test to DB
 add PB-0035 qual test to DB
+add PB-0036 and sub-components to DB
+add PB-0036 electrical test to DB
+PB-0013 has no electrical test; not adding qual test
+add PB-0036 qual test to DB
+PB-0013 has no electrical test; not adding qual test
+PB-0013 has no electrical test; not adding qual test
+PB-0013 has no electrical test; not adding qual test
+add PB-0007 and sub-components to DB
+add PB-0007 electrical test to DB
+add PB-0008 and sub-components to DB
+add PB-0008 electrical test to DB
+add PB-0012 and sub-components to DB
+add PB-0012 electrical test to DB
+add PB-0013 and sub-components to DB
+add PB-0013 electrical test to DB
+add PB-0022 and sub-components to DB
+add PB-0022 electrical test to DB
+add PB-0025 and sub-components to DB
+add PB-0025 electrical test to DB
+add PB-0026 and sub-components to DB
+add PB-0026 electrical test to DB
+add PB-0007 qual test to DB
+add PB-0008 qual test to DB
+add PB-0013 qual test to DB
+add PB-0022 qual test to DB
+add PB-0025 qual test to DB
+add PB-0026 qual test to DB

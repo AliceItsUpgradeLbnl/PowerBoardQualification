@@ -214,6 +214,12 @@ def SetBiasVoltage(voltage, PowerUnitID=1):
     I2CData = [0x11, int(voltage)]
     WriteToDevice(I2CLink(PowerUnitID, LinkType), PotBiasAddress, *I2CData) 
 
+def SetBiasVoltageNonVolatile(voltage, PowerUnitID=1):
+
+    LinkType = PotBiasLink
+    I2CData = [0x51, int(voltage)]
+    WriteToDevice(I2CLink(PowerUnitID, LinkType), PotBiasAddress, *I2CData) 
+
 # Goes through and returns if there are no issues
 def CheckPotentiometersPower(PowerUnitID):
     LinkType = PotPowerLink

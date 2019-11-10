@@ -27,15 +27,17 @@ OpenFtdi() # Starts communication with RDO board
 RaiseThresholdsToMax(PowerUnitID)
 #SetThresholdAll(PowerUnitID, 0x800)
 
-SetPowerVoltageAll(200, PowerUnitID)
+SetPowerVoltageAll(100, PowerUnitID)
+SetBiasVoltage(125, PowerUnitID)
+SetBiasVoltageNonVolatile(125, PowerUnitID)
 
 time.sleep(5)
 
 if testType == 'bias':
     UnlatchBiasAll(PowerUnitID)
 elif testType == 'power':
-    #UnlatchPower(channel, PowerUnitID)
-    UnlatchPowerAll(PowerUnitID)
+    UnlatchPower(channel, PowerUnitID)
+    #UnlatchPowerAll(PowerUnitID)
 else:
     print "Invalid test or channel"
     exit()
