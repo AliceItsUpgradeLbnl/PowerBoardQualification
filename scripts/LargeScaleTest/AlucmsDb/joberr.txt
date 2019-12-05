@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/AlucmsDb/writepbteststodb.py", line 5, in <module>
+    import dbinteractions as itsdb
+  File "/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/AlucmsDb/dbinteractions.py", line 11, in <module>
+    cookies = cern_sso.krb_sign_on(WSDL)
+  File "/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/AlucmsDb/cern_sso.py", line 124, in krb_sign_on
+    return _finalise_login(s, auth_results=r2)
+  File "/home/its/Desktop/PB-production/PB-production/scripts/LargeScaleTest/AlucmsDb/cern_sso.py", line 64, in _finalise_login
+    r2.raise_for_status()
+  File "/usr/local/lib/python2.7/site-packages/requests/models.py", line 940, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://login.cern.ch/adfs/ls/auth/integrated/?wa=wsignin1.0&wtrealm=https%3a%2f%2falucmsapi.web.cern.ch%2f&wctx=rm%3d0%26id%3dpassive%26ru%3d%252fAlucmswebAPI.asmx%253fWSDL&wct=2019-12-01T04%3a00%3a02Z
