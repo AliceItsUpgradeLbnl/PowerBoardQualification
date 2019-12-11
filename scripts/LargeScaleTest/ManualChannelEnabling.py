@@ -11,7 +11,7 @@ if len(sys.argv) != 3:
 
 testType = sys.argv[1]
 channel = int(sys.argv[2])
-PowerUnitID = 2
+PowerUnitID = 1
 
 biasPs = BkPrecision168xInterface()
 biasPs.SetVoltage(5.0)

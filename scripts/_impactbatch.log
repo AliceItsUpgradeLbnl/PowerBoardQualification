@@ -1,6 +1,6 @@
 iMPACT Version: Oct 13 2013 08:43:40
 
-iMPACT log file Started on Thu Dec  5 15:42:36 2019
+iMPACT log file Started on Tue Dec 10 17:01:40 2019
 
 Preference Table
 Name                 Setting             
@@ -48,7 +48,7 @@ INFO:iMPACT:501 - '1': Added Device xc6vlx240t successfully.
 Maximum TCK operating frequency for this device chain: 66000000.
 Validating chain...
 Boundary-scan chain validated successfully.
-1: Device Temperature: Current Reading:   35.61 C, Min. Reading:   34.62 C, Max.Reading:   36.10 C
+1: Device Temperature: Current Reading:   36.59 C, Min. Reading:   34.13 C, Max.Reading:   37.09 C
 1: VCCINT Supply: Current Reading:   0.999 V, Min. Reading:   0.996 V, Max.Reading:   1.002 V
 1: VCCAUX Supply: Current Reading:   2.496 V, Min. Reading:   2.493 V, Max.Reading:   2.502 V
 '1': Programming device...

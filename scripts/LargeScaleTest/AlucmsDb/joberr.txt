@@ -9,4 +9,4 @@ Traceback (most recent call last):
     r2.raise_for_status()
   File "/usr/local/lib/python2.7/site-packages/requests/models.py", line 940, in raise_for_status
     raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://login.cern.ch/adfs/ls/auth/integrated/?wa=wsignin1.0&wtrealm=https%3a%2f%2falucmsapi.web.cern.ch%2f&wctx=rm%3d0%26id%3dpassive%26ru%3d%252fAlucmswebAPI.asmx%253fWSDL&wct=2019-12-01T04%3a00%3a02Z
+requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://login.cern.ch/adfs/ls/auth/integrated/?wa=wsignin1.0&wtrealm=https%3a%2f%2falucmsapi.web.cern.ch%2f&wctx=rm%3d0%26id%3dpassive%26ru%3d%252fAlucmswebAPI.asmx%253fWSDL&wct=2019-12-08T04%3a00%3a03Z

@@ -278,7 +278,7 @@ class Application(tk.Frame):
             	set_volt_overlimit_TDK(tdk_id, 3.6)
             	set_volt_TDK(tdk_id, voltage)
             	set_status_TDK(tdk_id, "ON")
-                time.sleep(1.)
+                time.sleep(3.)
             	set_curr_TDK(tdk_id, 30.)
             	switchcontrol_TDK(tdk_id, "LOC")
                 return True
@@ -336,6 +336,7 @@ class Application(tk.Frame):
             tdk_voltage = int(float(read_volt_TDK(tdk_id)) * 10)/10.
             tdk_current = float(read_curr_TDK(tdk_id))
             if (tdk_status != "ON" or tdk_voltage != 3.3 or tdk_current > 0.5):
+                print str(tdk_status) + " " + str(tdk_voltage) + " " + str(tdk_current)
                 print "Error: Power Status on Power Unit %s is wrong" %(PowerUnitID) 
                 return False
             return True  

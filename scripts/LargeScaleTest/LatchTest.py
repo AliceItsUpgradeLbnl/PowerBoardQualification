@@ -46,6 +46,7 @@ def LatchTest(output, load, PowerUnitID):
         sys.exit()
     # Check negative regulator voltage at power on
     if (float(ponVoltages[16]) > -4500 or float(ponVoltages[16]) < -5000):
+        print ponVoltages
         print "Power on voltage for negative voltage regulator is not ~-5V"
         sys.exit()
     # Check negative regulator current at power on

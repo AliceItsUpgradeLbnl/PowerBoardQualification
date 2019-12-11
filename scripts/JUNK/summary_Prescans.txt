@@ -17,14 +17,14 @@ Smoke test passed? YES
 -------------------------- Summary for Temperature test ------------------------------
  
 Power Unit Right:
-Onboard sensor initial temperature.     Mean: 22.958C, RMS: 0.00951173113507
-External sensor #1 initial temperature. Mean: 30.079C, RMS: 0.0145294093055
-External sensor #2 initial temperature. Mean: 30.532C, RMS: 0.0141792516011
+Onboard sensor initial temperature.     Mean: 24.537C, RMS: 0.0170740799212
+External sensor #1 initial temperature. Mean: 29.682C, RMS: 0.0190234622701
+External sensor #2 initial temperature. Mean: 30.827C, RMS: 0.0203015987236
  
 Power Unit Left:
-Onboard sensor initial temperature.     Mean: 23.325C, RMS: 0.0145294093055
-External sensor #1 initial temperature. Mean: 28.284C, RMS: 0.0170740799212
-External sensor #2 initial temperature. Mean: 27.438C, RMS: 0.015532591901
+Onboard sensor initial temperature.     Mean: 24.987C, RMS: 0.0170740799212
+External sensor #1 initial temperature. Mean: 28.04C, RMS: 0.015532591901
+External sensor #2 initial temperature. Mean: 27.194C, RMS: 0.0145294093055
  
 -------------------------- Summary for I2C communication test ------------------------
  

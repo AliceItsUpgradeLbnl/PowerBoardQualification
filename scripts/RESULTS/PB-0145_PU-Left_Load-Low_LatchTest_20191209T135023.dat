@@ -1,0 +1,29 @@
+ 
+Power on Voltages and currents:
+Channel:              0      1      2      3      4      5      6      7      8      9     10     11     12     13     14     15     NREG
+Voltage (e-3) [V]: 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 -4772.5000
+Current (e-3) [I]: -7.500 -2.500 -3.917 -4.167 -5.417 -4.167 -3.417 -1.583 -2.500 -5.000 -3.000 -2.500 -6.417 -3.333 -4.833 -4.167 59.075
+ 
+CH#   After PB powering  /  After Enabling  /  After Disabling  /  After Power not latched  /  After Power Latched  /  All checks passed?
+ 0          0                       1                  0                       1                        0                   YES
+ 1          0                       2                  0                       2                        0                   YES
+ 2          0                       4                  0                       4                        0                   YES
+ 3          0                       8                  0                       8                        0                   YES
+ 4          0                      16                  0                      16                        0                   YES
+ 5          0                      32                  0                      32                        0                   YES
+ 6          0                      64                  0                      64                        0                   YES
+ 7          0                     128                  0                     128                        0                   YES
+ 8          0                     256                  0                     256                        0                   YES
+ 9          0                     512                  0                     512                        0                   YES
+10          0                    1024                  0                    1024                        0                   YES
+11          0                    2048                  0                    2048                        0                   YES
+12          0                    4096                  0                    4096                        0                   YES
+13          0                    8192                  0                    8192                        0                   YES
+14          0                   16384                  0                   16384                        0                   YES
+15          0                   32768                  0                   32768                        0                   YES
+B0          0                       1                  0                                                                    YES
+B1          0                       2                  0                                                                    YES
+B2          0                       4                  0                                                                    YES
+B3          0                       8                  0                                                                    YES
+ 
+Negative voltage regulator hardware current limit measured with Low current loads: 0.087133

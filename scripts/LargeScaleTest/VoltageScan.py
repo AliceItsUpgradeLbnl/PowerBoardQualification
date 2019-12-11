@@ -156,3 +156,5 @@ def BiasVoltageScan(output, load, PowerUnitID, testType = "standard"):
 
     # Ends communication with RDO board
     CloseFtdi() 
+
+#BiasVoltageScan("trial.txt", "Nominal", 1)
