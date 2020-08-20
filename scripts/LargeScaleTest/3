@@ -21,6 +21,7 @@ biasPs.SetOutputOn()
 set_volt_TDK(PowerUnitID - 1, 3.3)
 set_status_TDK(PowerUnitID - 1, "ON")
 
+
 OpenFtdi() # Starts communication with RDO board
 
 RaiseThresholdsToMax(PowerUnitID)
@@ -28,7 +29,7 @@ RaiseThresholdsToMax(PowerUnitID)
 
 SetPowerVoltageAll(255, PowerUnitID)
 SetBiasVoltage(125, PowerUnitID)
-#SetBiasVoltageNonVolatile(125, PowerUnitID)
+SetBiasVoltageNonVolatile(125, PowerUnitID)
 
 time.sleep(5)
 

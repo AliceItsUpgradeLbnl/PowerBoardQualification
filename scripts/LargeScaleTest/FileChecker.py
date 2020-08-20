@@ -13,6 +13,7 @@ def CheckBoardIdsFilesComplete(boardIdList):
     for boardId in boardIdList:
         thisBoardComplete = CheckBoardIdFilesComplete(boardId)
         allComplete = allComplete and thisBoardComplete
+        print(allComplete, boardId)
     return allComplete
 
 def CheckBoardIdFilesComplete(boardId):

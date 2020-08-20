@@ -1273,21 +1273,106 @@ class Application(tk.Frame):
         ###################################################################################
 
         ########### PUSH DATA BUTTON  ######################################
-        def PushDataToRepo():
-            if not tkMessageBox.askyesno("Push data to repo", "Do you want to push all files to the repository?"): 
-                return 
-            if not tkMessageBox.askyesno("Push data to repo", "Are you really sure that you want to push all files to the repository?"): 
-                return 
-            if not tkMessageBox.askyesno("Push data to repo", "100% sure?"): 
-                return 
-            subprocess.call(['/bin/bash', '-c', "cd .."])
-            subprocess.call(['/bin/bash', '-c', "git add *"])
-            subprocess.call(['/bin/bash', '-c', "git commit -m \"updating results\""])
-            subprocess.call(['/bin/bash', '-c', "git push origin master"])
-            print "Done pushing data to the repo"
+        #def PushDataToRepo():
+        #    if not tkMessageBox.askyesno("Push data to repo", "Do you want to push all files to the repository?"): 
+        #        return 
+        #    if not tkMessageBox.askyesno("Push data to repo", "Are you really sure that you want to push all files to the repository?"): 
+        #        return 
+        #    if not tkMessageBox.askyesno("Push data to repo", "100% sure?"): 
+        #        return 
+        #    subprocess.call(['/bin/bash', '-c', "cd .."])
+        #    subprocess.call(['/bin/bash', '-c', "git add *"])
+        #    subprocess.call(['/bin/bash', '-c', "git commit -m \"updating results\""])
+        #    subprocess.call(['/bin/bash', '-c', "git push origin master"])
+        #    print "Done pushing data to the repo"
             
+        #PushDataToRepoButton = tk.Button(self, text = "Push Data", command = PushDataToRepo, state = tsMode)
+        #PushDataToRepoButton.grid(row = 10, column = 6, sticky = 'nsew')
+
+        def PushDataToRepo():
+	    def SaveDataToRepo():
+		source = str(os.getcwd()) + "/RESULTS/*"
+                destination = pathField.get()
+		if not destination:
+		    statusField.config(text = ("Transfer status: No path specified!"), fg = "red")
+		    return
+		child = subprocess.Popen(" ".join(["rsync", "-avh", source, destination]), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+                stdout, stderr = child.communicate()
+		rc = child.returncode
+		if rc:
+                    print(stderr)
+		    statusField.config(text = ("Transfer status: Wrong path specified!"), fg = "red")
+		else:
+                    print(stdout)
+                    file = open("./LargeScaleTest/destination.txt", "w")
+                    file.write(destination)
+                    file.close()
+		    statusField.config(text = ("Transfer status: Done!"), fg = "blue")
+            pushWindow = tk.Tk()
+            pushWindow.geometry("410x220")
+            pushWindow.title("Save test data")
+            pushWindow.grid()
+            pushWindow.grid_rowconfigure(0, minsize = 5)
+            pushWindow.grid_rowconfigure(1, minsize = 15)
+            pushWindow.grid_rowconfigure(2, minsize = 10)
+            pushWindow.grid_rowconfigure(3, minsize = 10)
+            pushWindow.grid_rowconfigure(4, minsize = 5)
+            pushWindow.grid_rowconfigure(5, minsize = 15)
+            pushWindow.grid_rowconfigure(6, minsize = 10)
+            pushWindow.grid_rowconfigure(7, minsize = 10)
+            pushWindow.grid_rowconfigure(8, minsize = 5)
+            pushWindow.grid_rowconfigure(9, minsize = 10)
+            pushWindow.grid_rowconfigure(10, minsize = 5)
+            pushWindow.grid_rowconfigure(11, minsize = 30)
+            pushWindow.grid_rowconfigure(12, minsize = 10)
+            instructions = tk.Label(pushWindow, text = "Pushing data to a remote directory will only work if:", fg="black")
+            instructions.config(font=("Arial", 11))
+            instructions_a = tk.Label(pushWindow, text = "    a) Remote server is accessible via SSH with publickey", fg="black")
+            instructions_a.config(font=("Arial", 9))
+            instructions_b = tk.Label(pushWindow, text = "    b) User has write privileges on specified remote directory", fg="black")
+            instructions_b.config(font=("Arial", 9))
+            instructions_c = tk.Label(pushWindow, text = "Please enter a valid local or remote path:", fg="black")
+            instructions_c.config(font=("Arial", 11))
+            instructions_d = tk.Label(pushWindow, text = "    a) Example remote path: username@remote_server://remote_path", fg="black")
+            instructions_d.config(font=("Arial", 9))
+            instructions_e = tk.Label(pushWindow, text = "    b) Example local path: /home/username/relative_path", fg="black")
+            instructions_e.config(font=("Arial", 9))
+            instructions.grid(row = 1, column = 1, columnspan = 4, sticky='nw')
+            instructions_a.grid(row = 2, column = 1, columnspan = 4, sticky='w')
+            instructions_b.grid(row = 3, column = 1, columnspan = 4, sticky='w')
+            instructions_c.grid(row = 5, column = 1, columnspan = 4, sticky='nw')
+            instructions_d.grid(row = 6, column = 1, columnspan = 4, sticky='w')
+            instructions_e.grid(row = 7, column = 1, columnspan = 4, sticky="w")
+            raw_data_destination = tk.StringVar()
+            pathField = tk.Entry(pushWindow, textvariable=raw_data_destination, width = 50, background = 'white')
+            pathField.grid(row = 9, column = 1, columnspan = 4)
+            SaveDataToRepoButton = tk.Button(pushWindow, text = "Push Data", command = SaveDataToRepo)
+            SaveDataToRepoButton.grid(row = 11, column = 2, columnspan = 2)
+            statusField = tk.Label(pushWindow, textvariable="", fg="blue")
+            statusField.grid(row = 12, column = 1, columnspan = 4, sticky="w")
+            statusField.config(text = ("Transfer status: None"), font = ("Courier", 10), fg = "black")
+	    if os.path.exists("./LargeScaleTest/destination.txt"):
+	        file = open("./LargeScaleTest/destination.txt", "r")
+	        destination = file.readline()
+            pathField.delete(0,"end")
+            pathField.insert(0, destination)
+            
+            #newWindow = tk.TopLevel(master)
+            #if not tkMessageBox.askyesno("Push data to repo", "Do you want to push all files to the repository?"): 
+            #    return 
+            #if not tkMessageBox.askyesno("Push data to repo", "Are you really sure that you want to push all files to the repository?"): 
+            #    return 
+            #if not tkMessageBox.askyesno("Push data to repo", "100% sure?"): 
+            #    return 
+            #subprocess.call(['/bin/bash', '-c', "cd .."])
+            #subprocess.call(['/bin/bash', '-c', "git add *"])
+            #subprocess.call(['/bin/bash', '-c', "git commit -m \"updating results\""])
+            #subprocess.call(['/bin/bash', '-c', "git push origin master"])
+            #print "Done pushing data to the repo"
+
         PushDataToRepoButton = tk.Button(self, text = "Push Data", command = PushDataToRepo, state = tsMode)
         PushDataToRepoButton.grid(row = 10, column = 6, sticky = 'nsew')
+
         #############################################################################
 
         ### Reports text field (PU RIGHT) #################################################
